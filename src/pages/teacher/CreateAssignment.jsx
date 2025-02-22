@@ -18,20 +18,14 @@ const CreateAssignment = () => {
     attachments: [],
   });
 
-   // ✅ Define getISTDateTime before return()
-   const getISTDateTime = () => {
+  const getISTDateTime = () => {
     let now = new Date();
-    now.setMinutes(now.getMinutes() + now.getTimezoneOffset() + 330); // Convert to IST (UTC+5:30)
+    let istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
+    let istTime = new Date(now.getTime() + istOffset);
     
-    let year = now.getFullYear();
-    let month = String(now.getMonth() + 1).padStart(2, "0");
-    let day = String(now.getDate()).padStart(2, "0");
-    let hours = String(now.getHours()).padStart(2, "0");
-    let minutes = String(now.getMinutes()).padStart(2, "0");
-    let seconds = String(now.getSeconds()).padStart(2, "0");
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`; // Format for datetime-local input
+    return istTime.toISOString().slice(0, 16); // Returns yyyy-MM-ddTHH:mm
   };
+  
 
   // Replace the hardcoded availableQuestions with state
   const [availableQuestions, setAvailableQuestions] = useState([]);
@@ -92,26 +86,16 @@ const CreateAssignment = () => {
   };
 
   const handleQuestionSelect = (e) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, (option) => ({
-      id: option.value,
-      title: option.text,
+    const { value, checked } = e.target;
+  
+    setFormData((prev) => ({
+      ...prev,
+      selectedQuestions: checked
+        ? [...prev.selectedQuestions, { id: value, title: e.target.dataset.title }]
+        : prev.selectedQuestions.filter((q) => q.id !== value),
     }));
-    setFormData((prev) => {
-      // Combine previous selected questions with newly selected ones, ensuring no duplicates
-      const updatedQuestions = [...prev.selectedQuestions];
-
-      selectedOptions.forEach((option) => {
-        if (!updatedQuestions.some((q) => q.id === option.id)) {
-          updatedQuestions.push(option);
-        }
-      });
-
-      return {
-        ...prev,
-        selectedQuestions: updatedQuestions,
-      };
-    });
   };
+ 
 
   const handleFileChange = (e) => {
     setFormData((prev) => ({
@@ -270,19 +254,21 @@ const CreateAssignment = () => {
             {error && <div className="error-message">{error}</div>}
 
             {availableQuestions.length > 0 && (
-              <select
-                id="questions"
-                multiple
-                onChange={handleQuestionSelect}
-                className="questions-select"
-                required
-              >
-                {availableQuestions.map((question) => (
-                  <option key={question.id} value={question.id}>
-                    {question.title}
-                  </option>
-                ))}
-              </select>
+              <div className="questions-list">
+              {availableQuestions.map((question) => (
+                <div key={question.id} className="question-item">
+                  <input
+                    type="checkbox"
+                    id={`question-${question.id}`}
+                    value={question.id}
+                    data-title={question.title}
+                    checked={formData.selectedQuestions.some((q) => q.id === question.id)}
+                    onChange={handleQuestionSelect}
+                  />
+                  <label htmlFor={`question-${question.id}`}>{question.title}</label>
+                </div>
+              ))}
+            </div>  
             )}
 
             {formData.selectedQuestions.length > 0 && (

@@ -268,3 +268,16 @@
     color: #666;
     font-style: italic;
   }
+
+  .questions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .question-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
