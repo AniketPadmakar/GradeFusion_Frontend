@@ -1,64 +1,175 @@
 // CreateAssignment.jsx
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import './CreateAssignment.css';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { getToken } from "../../data/Token";
+import hostURL from "../../data/URL";
+import "./CreateAssignment.css";
 
 const CreateAssignment = () => {
   const [formData, setFormData] = useState({
-    subject: '',
-    class: '',
-    batch: '',
-    title: '',
-    description: '',
-    dueDate: '',
-    maxMarks: '',
+    subject: "",
+    class: "",
+    batch: "",
+    title: "",
+    description: "",
+    dueDate: "",
+    maxMarks: "",
     selectedQuestions: [],
-    attachments: []
+    attachments: [],
   });
 
-  // Hardcoded questions data (replace with API fetch later)
-  const availableQuestions = [
-    { id: 1, title: "Write a program to implement bubble sort" },
-    { id: 2, title: "Create a function to check if a number is prime" },
-    { id: 3, title: "Implement a simple calculator using functions" },
-    { id: 4, title: "Write a program to find factorial of a number" },
-    { id: 5, title: "Create a program to check if a string is palindrome" }
-  ];
+   // ✅ Define getISTDateTime before return()
+   const getISTDateTime = () => {
+    let now = new Date();
+    now.setMinutes(now.getMinutes() + now.getTimezoneOffset() + 330); // Convert to IST (UTC+5:30)
+    
+    let year = now.getFullYear();
+    let month = String(now.getMonth() + 1).padStart(2, "0");
+    let day = String(now.getDate()).padStart(2, "0");
+    let hours = String(now.getHours()).padStart(2, "0");
+    let minutes = String(now.getMinutes()).padStart(2, "0");
+    let seconds = String(now.getSeconds()).padStart(2, "0");
 
-  const subjects = ['C', 'Python', 'Java'];
-  const classes = ['First Year', 'Second Year', 'Third Year'];
-  const batches = ['A1', 'A2', 'B1', 'B2'];
+    return `${year}-${month}-${day}T${hours}:${minutes}`; // Format for datetime-local input
+  };
+
+  // Replace the hardcoded availableQuestions with state
+  const [availableQuestions, setAvailableQuestions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const subjects = ["C", "Python", "Java"];
+  const classes = ["FE", "SE", "TE", "BE"];
+  const batches = ["A1", "A2", "B1", "B2"];
+
+  const fetchQuestions = async () => {
+    setIsLoading(true);
+    setError("");
+
+    const token = getToken("token");
+    if (!token) {
+      setError("Authentication failed. Please log in again.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${hostURL.link}/app/teacher/fetch-questions`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch questions");
+      }
+
+      const data = await response.json();
+      setAvailableQuestions(
+        data.questions.map((q) => ({
+          id: q._id,
+          title: q.title || q.question_text, // Adjust based on your question model
+        }))
+      );
+    } catch (err) {
+      setError("Error fetching questions: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleQuestionSelect = (e) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => ({
-      id: parseInt(option.value),
-      title: option.text
+    const selectedOptions = Array.from(e.target.selectedOptions, (option) => ({
+      id: option.value,
+      title: option.text,
     }));
-    setFormData(prev => ({
-      ...prev,
-      selectedQuestions: selectedOptions
-    }));
+    setFormData((prev) => {
+      // Combine previous selected questions with newly selected ones, ensuring no duplicates
+      const updatedQuestions = [...prev.selectedQuestions];
+
+      selectedOptions.forEach((option) => {
+        if (!updatedQuestions.some((q) => q.id === option.id)) {
+          updatedQuestions.push(option);
+        }
+      });
+
+      return {
+        ...prev,
+        selectedQuestions: updatedQuestions,
+      };
+    });
   };
 
   const handleFileChange = (e) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      attachments: [...e.target.files]
+      attachments: [...e.target.files],
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Add your submission logic here
+
+    const token = getToken("token");
+    if (!token) {
+      alert("Authentication failed. Please log in again.");
+      return;
+    }
+
+    // Convert the due date to a formatted string
+    const dueDate = new Date(formData.dueDate);
+    const formattedDueDate =
+      dueDate.toLocaleDateString("en-GB") +
+      " :: " +
+      dueDate.toLocaleTimeString("en-GB");
+
+    // Transform the data to match backend expectations
+    const submissionData = {
+      assignment_name: formData.title,
+      questions: formData.selectedQuestions.map((q) => q.id), // Just send the IDs
+      class_name: formData.class,
+      batch: formData.batch,
+      due_at: formattedDueDate,
+      marks: parseInt(formData.maxMarks),
+    };
+
+    try {
+      const response = await fetch(
+        `${hostURL.link}/app/teacher/create-assignments`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(submissionData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to create assignment");
+      }
+
+      const data = await response.json();
+      alert("Assignment created successfully!");
+      console.log("Server Response:", data);
+    } catch (error) {
+      console.error("Error submitting assignment:", error);
+      alert("Error submitting assignment. Please try again.");
+    }
   };
 
   return (
@@ -67,30 +178,40 @@ const CreateAssignment = () => {
         <div className="nav-content">
           <div className="logo">GradeFusion</div>
           <div className="nav-links">
-            <Link to="/" className="nav-link active">Home</Link>
-            <Link to="/about" className="nav-link">About</Link>
-            <Link to="/contact" className="nav-link">Contact</Link>
-            <Link to="/signup" className="nav-link signup-btn">Sign Up</Link>
+            <Link to="/" className="nav-link active">
+              Home
+            </Link>
+            <Link to="/about" className="nav-link">
+              About
+            </Link>
+            <Link to="/contact" className="nav-link">
+              Contact
+            </Link>
+            <Link to="/signup" className="nav-link signup-btn">
+              Sign Up
+            </Link>
           </div>
         </div>
       </nav>
 
       <div className="assignment-container">
         <h1 className="page-title">Create New Assignment</h1>
-        
+
         <form onSubmit={handleSubmit} className="assignment-form">
           <div className="form-group">
             <label htmlFor="subject">Subject</label>
-            <select 
-              id="subject" 
-              name="subject" 
+            <select
+              id="subject"
+              name="subject"
               value={formData.subject}
               onChange={handleChange}
               required
             >
               <option value="">Select Subject</option>
-              {subjects.map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
+              {subjects.map((subject) => (
+                <option key={subject} value={subject}>
+                  {subject}
+                </option>
               ))}
             </select>
           </div>
@@ -98,32 +219,36 @@ const CreateAssignment = () => {
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="class">Class</label>
-              <select 
-                id="class" 
-                name="class" 
+              <select
+                id="class"
+                name="class"
                 value={formData.class}
                 onChange={handleChange}
                 required
               >
                 <option value="">Select Class</option>
-                {classes.map(cls => (
-                  <option key={cls} value={cls}>{cls}</option>
+                {classes.map((cls) => (
+                  <option key={cls} value={cls}>
+                    {cls}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="form-group">
               <label htmlFor="batch">Batch</label>
-              <select 
-                id="batch" 
-                name="batch" 
+              <select
+                id="batch"
+                name="batch"
                 value={formData.batch}
                 onChange={handleChange}
                 required
               >
                 <option value="">Select Batch</option>
-                {batches.map(batch => (
-                  <option key={batch} value={batch}>{batch}</option>
+                {batches.map((batch) => (
+                  <option key={batch} value={batch}>
+                    {batch}
+                  </option>
                 ))}
               </select>
             </div>
@@ -131,24 +256,40 @@ const CreateAssignment = () => {
 
           <div className="form-group">
             <label htmlFor="questions">Select Questions</label>
-            <select 
-              id="questions" 
-              multiple 
-              onChange={handleQuestionSelect}
-              className="questions-select"
-              required
+            <button
+              type="button"
+              onClick={fetchQuestions}
+              className="fetch-questions-btn"
+              disabled={isLoading}
             >
-              {availableQuestions.map(question => (
-                <option key={question.id} value={question.id}>
-                  {question.title}
-                </option>
-              ))}
-            </select>
+              {isLoading
+                ? "Fetching Questions..."
+                : "Fetch Available Questions"}
+            </button>
+
+            {error && <div className="error-message">{error}</div>}
+
+            {availableQuestions.length > 0 && (
+              <select
+                id="questions"
+                multiple
+                onChange={handleQuestionSelect}
+                className="questions-select"
+                required
+              >
+                {availableQuestions.map((question) => (
+                  <option key={question.id} value={question.id}>
+                    {question.title}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {formData.selectedQuestions.length > 0 && (
               <div className="selected-questions">
                 <p>Selected Questions:</p>
                 <ul>
-                  {formData.selectedQuestions.map(q => (
+                  {formData.selectedQuestions.map((q) => (
                     <li key={q.id}>{q.title}</li>
                   ))}
                 </ul>
@@ -190,7 +331,10 @@ const CreateAssignment = () => {
                 id="dueDate"
                 name="dueDate"
                 value={formData.dueDate}
-                onChange={handleChange}
+                min={getISTDateTime()} // Restrict to future date & time in IST
+                onChange={(e) =>
+                  setFormData({ ...formData, dueDate: e.target.value })
+                }
                 required
               />
             </div>
