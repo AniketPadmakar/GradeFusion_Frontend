@@ -156,6 +156,10 @@
     background: #9C27B0;
     color: white;
 }
+.question-btn{
+    background: #df529b;
+    color: white;
+}
 
 .action-button:hover {
     transform: scale(1.05);

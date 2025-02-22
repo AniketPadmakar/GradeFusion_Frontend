@@ -10,6 +10,9 @@ import StudentSubmissionView from './pages/teacher/StudentSubmissionView';
 import AssignmentDetails from './pages/student/AssignmentDetails';
 import LiveAssignmentStart from './pages/student/LiveAssignmentStart';
 import LiveAssignmentPage from './pages/student/LiveAssignmentPage';
+import ViewQuestions from './pages/teacher/ViewQuestions';
+import CreateQuestion from './pages/teacher/CreateQuestion';
+
 
 function App() {
   return (
@@ -25,6 +28,8 @@ function App() {
         <Route path="/AssignmentDetails" element={<AssignmentDetails />} />
         <Route path="/LiveAssignmentStart" element={<LiveAssignmentStart />} />
         <Route path="/LiveAssignmentPage" element={<LiveAssignmentPage />} />
+        <Route path="/ViewQuestions" element={<ViewQuestions />} />
+        <Route path="/CreateQuestion" element={<CreateQuestion />} />
       </Routes>
     </Router>
   );

@@ -49,6 +49,9 @@ const TeacherDashboard = () => {
                         <button className="action-button analytics-btn" onClick={() => navigate('/ReopenAssignment')}>
                             Reopen Assignment
                         </button>
+                        <button className="action-button question-btn" onClick={() => navigate('/ViewQuestions')}>
+                            View Questions
+                        </button>
                     </section>
                     <section className="recent-activity">
                         <h2>Recent Activity</h2>

@@ -4,6 +4,8 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { setToken } from "../../../data/Token";
 import hostURL from "../../../data/URL";
+import { User, Mail, Lock, BookOpen, GraduationCap } from 'lucide-react';
+import './AuthPages.css';
 
 const AuthPages = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -79,58 +81,433 @@ const AuthPages = () => {
   };
 
   return (
-    <motion.div 
-      className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.div
-        className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
-        initial={{ scale: 0.9 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 120 }}
+    <div className="auth-container">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="auth-card"
       >
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">{isSignUp ? "Create an Account" : "Sign In"}</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="auth-header">
+          <h1>{isSignUp ? 'Create Account' : 'Welcome Back'}</h1>
+          <p>{isSignUp ? 'Sign up to get started' : 'Sign in to continue'}</p>
+        </div>
+
+        {isSignUp && (
+          <div className="role-selector">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setFormData({...formData, role: "student"})}
+              className={`role-button ${formData.role === "student" ? 'active' : ''}`}
+            >
+              <GraduationCap className="icon" />
+              <span>Student</span>
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setFormData({...formData, role: "teacher"})}
+              className={`role-button ${formData.role === "teacher" ? 'active' : ''}`}
+            >
+              <BookOpen className="icon" />
+              <span>Teacher</span>
+            </motion.button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="auth-form">
           {isSignUp && (
-            <>
-              <input type="text" name="firstName" placeholder="First Name" value={formData.firstName} onChange={handleChange} required className="w-full p-3 border border-gray-300 rounded-lg" />
-              <input type="text" name="lastName" placeholder="Last Name" value={formData.lastName} onChange={handleChange} required className="w-full p-3 border border-gray-300 rounded-lg" />
-            </>
+            <div className="name-fields">
+              <div className="input-group">
+                <User className="input-icon" />
+                <input 
+                  type="text" 
+                  name="firstName" 
+                  placeholder="First Name" 
+                  value={formData.firstName} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="input-group">
+                <User className="input-icon" />
+                <input 
+                  type="text" 
+                  name="lastName" 
+                  placeholder="Last Name" 
+                  value={formData.lastName} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+            </div>
           )}
-          <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} required className="w-full p-3 border border-gray-300 rounded-lg" />
-          <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} required className="w-full p-3 border border-gray-300 rounded-lg" />
-          
-          <select name="role" value={formData.role} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg">
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
-          </select>
-          
+
+          <div className="input-group">
+            <Mail className="input-icon" />
+            <input 
+              type="email" 
+              name="email" 
+              placeholder="Email" 
+              value={formData.email} 
+              onChange={handleChange} 
+              required 
+            />
+          </div>
+
+          <div className="input-group">
+            <Lock className="input-icon" />
+            <input 
+              type="password" 
+              name="password" 
+              placeholder="Password" 
+              value={formData.password} 
+              onChange={handleChange} 
+              required 
+            />
+          </div>
+
+          {!isSignUp && (
+            <div className="input-group">
+              <select 
+                name="role" 
+                value={formData.role} 
+                onChange={handleChange}
+              >
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+              </select>
+            </div>
+          )}
+
           {isSignUp && formData.role === "student" && (
-            <>
-              <input type="text" name="class" placeholder="Class" value={formData.class} onChange={handleChange} required className="w-full p-3 border border-gray-300 rounded-lg" />
-              <input type="text" name="batch" placeholder="Batch" value={formData.batch} onChange={handleChange} required className="w-full p-3 border border-gray-300 rounded-lg" />
-            </>
+            <div className="student-fields">
+              <input 
+                type="text" 
+                name="class" 
+                placeholder="Class" 
+                value={formData.class} 
+                onChange={handleChange} 
+                required 
+              />
+              <input 
+                type="text" 
+                name="batch" 
+                placeholder="Batch" 
+                value={formData.batch} 
+                onChange={handleChange} 
+                required 
+              />
+            </div>
           )}
+
           {isSignUp && formData.role === "teacher" && (
-            <input type="text" name="subject" placeholder="Subject" value={formData.subject} onChange={handleChange} required className="w-full p-3 border border-gray-300 rounded-lg" />
+            <input 
+              type="text" 
+              name="subject" 
+              placeholder="Subject" 
+              value={formData.subject} 
+              onChange={handleChange} 
+              required 
+              className="subject-input"
+            />
           )}
-          
-          <motion.button type="submit" className={`w-full p-3 text-white rounded-lg ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`} disabled={loading} whileTap={{ scale: 0.95 }}>
-            {loading ? <div className="animate-spin h-5 w-5 border-4 border-white border-t-transparent rounded-full mx-auto"></div> : (isSignUp ? "Sign Up" : "Sign In")}
+
+          <motion.button 
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            type="submit" 
+            className={`submit-button ${loading ? 'loading' : ''}`}
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="loading-spinner" />
+            ) : (
+              isSignUp ? "Sign Up" : "Sign In"
+            )}
           </motion.button>
         </form>
-        <p className="text-center text-gray-600 mt-4">
-          {isSignUp ? "Already have an account?" : "Don't have an account?"}
-          <button onClick={toggleAuthMode} className="text-blue-500 ml-1 hover:underline">{isSignUp ? "Sign In" : "Sign Up"}</button>
-        </p>
+
+        <div className="auth-footer">
+          <p>
+            {isSignUp ? "Already have an account? " : "Don't have an account? "}
+            <button 
+              type="button"
+              onClick={toggleAuthMode} 
+              className="toggle-auth"
+            >
+              {isSignUp ? "Sign In" : "Sign Up"}
+            </button>
+          </p>
+        </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };
 
 export default AuthPages;
+
+
+
+
+
+// import React, { useState } from "react";
+// import { useNavigate } from "react-router-dom";
+// import axios from "axios";
+// import { motion } from "framer-motion";
+// import { setToken } from "../../../data/Token";
+// import hostURL from "../../../data/URL";
+// import { User, Mail, Lock, BookOpen, GraduationCap } from 'lucide-react';
+
+// const AuthPages = () => {
+//   const [isSignUp, setIsSignUp] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const [formData, setFormData] = useState({ 
+//     firstName: "", 
+//     lastName: "", 
+//     email: "", 
+//     password: "", 
+//     role: "student", 
+//     class: "", 
+//     batch: "", 
+//     subject: "" 
+//   });
+//   const navigate = useNavigate();
+
+//   const toggleAuthMode = () => setIsSignUp(!isSignUp);
+
+//   const handleChange = (e) => {
+//     setFormData({ ...formData, [e.target.name]: e.target.value });
+//   };
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setLoading(true);
+    
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     if (!emailRegex.test(formData.email)) {
+//       alert("Invalid email format.");
+//       setLoading(false);
+//       return;
+//     }
+    
+//     if (isSignUp && (formData.password.length < 8 || !/\d/.test(formData.password))) {
+//       alert("Password should be at least 8 characters long and contain a number.");
+//       setLoading(false);
+//       return;
+//     }
+
+//     try {
+//       const endpoint = isSignUp
+//         ? `${hostURL.link}/app/${formData.role}/signup`
+//         : `${hostURL.link}/app/${formData.role}/signin`;
+      
+//       const requestData = { 
+//         email: formData.email, 
+//         password: formData.password, 
+//         role: formData.role 
+//       };
+      
+//       if (isSignUp) {
+//         requestData.firstName = formData.firstName;
+//         requestData.lastName = formData.lastName;
+        
+//         if (formData.role === "student") {
+//           requestData.class = formData.class;
+//           requestData.batch = formData.batch;
+//         } else {
+//           requestData.subject = formData.subject;
+//         }
+//       }
+      
+//       const response = await axios.post(endpoint, requestData);
+      
+//       if (response.data.token) {
+//         setToken(response.data.token);
+//         navigate(formData.role === "teacher" ? "/TeacherDash" : "/StudentDash");
+//       }
+//     } catch (error) {
+//       alert(error.response?.data?.message || "Something went wrong");
+//     }
+//     setLoading(false);
+//   };
+
+//   return (
+//     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+//       <motion.div 
+//         initial={{ opacity: 0, y: 20 }}
+//         animate={{ opacity: 1, y: 0 }}
+//         className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 mx-4 ml-450 transition-all duration-300"
+//       >
+//         <div className="text-center mb-8">
+//           <h1 className="text-3xl font-bold text-gray-800 mb-2">
+//             {isSignUp ? 'Create Account' : 'Welcome Back'}
+//           </h1>
+//           <p className="text-gray-600">
+//             {isSignUp ? 'Sign up to get started' : 'Sign in to continue'}
+//           </p>
+//         </div>
+
+//         {isSignUp && (
+//           <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+//             <motion.button
+//               whileTap={{ scale: 0.95 }}
+//               onClick={() => setFormData({...formData, role: "student"})}
+//               className={`flex items-center justify-center gap-2 flex-1 py-2 px-4 rounded-md transition-all ${formData.role === "student" ? 'bg-white shadow-sm' : ''}`}
+//             >
+//               <GraduationCap className="w-4 h-4" />
+//               <span>Student</span>
+//             </motion.button>
+//             <motion.button
+//               whileTap={{ scale: 0.95 }}
+//               onClick={() => setFormData({...formData, role: "teacher"})}
+//               className={`flex items-center justify-center gap-2 flex-1 py-2 px-4 rounded-md transition-all ${formData.role === "teacher" ? 'bg-white shadow-sm' : ''}`}
+//             >
+//               <BookOpen className="w-4 h-4" />
+//               <span>Teacher</span>
+//             </motion.button>
+//           </div>
+//         )}
+
+//         <form onSubmit={handleSubmit} className="space-y-4">
+//           {isSignUp && (
+//             <div className="grid grid-cols-2 gap-4">
+//               <div className="relative">
+//                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+//                 <input 
+//                   type="text" 
+//                   name="firstName" 
+//                   placeholder="First Name" 
+//                   value={formData.firstName} 
+//                   onChange={handleChange} 
+//                   required 
+//                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//                 />
+//               </div>
+//               <div className="relative">
+//                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+//                 <input 
+//                   type="text" 
+//                   name="lastName" 
+//                   placeholder="Last Name" 
+//                   value={formData.lastName} 
+//                   onChange={handleChange} 
+//                   required 
+//                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//                 />
+//               </div>
+//             </div>
+//           )}
+
+//           <div className="relative">
+//             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+//             <input 
+//               type="email" 
+//               name="email" 
+//               placeholder="Email" 
+//               value={formData.email} 
+//               onChange={handleChange} 
+//               required 
+//               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//             />
+//           </div>
+
+//           <div className="relative">
+//             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+//             <input 
+//               type="password" 
+//               name="password" 
+//               placeholder="Password" 
+//               value={formData.password} 
+//               onChange={handleChange} 
+//               required 
+//               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//             />
+//           </div>
+
+//           {!isSignUp && (
+//             <div className="relative">
+//               <select 
+//                 name="role" 
+//                 value={formData.role} 
+//                 onChange={handleChange} 
+//                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+//               >
+//                 <option value="student">Student</option>
+//                 <option value="teacher">Teacher</option>
+//               </select>
+//             </div>
+//           )}
+
+//           {isSignUp && formData.role === "student" && (
+//             <div className="grid grid-cols-2 gap-4">
+//               <input 
+//                 type="text" 
+//                 name="class" 
+//                 placeholder="Class" 
+//                 value={formData.class} 
+//                 onChange={handleChange} 
+//                 required 
+//                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//               />
+//               <input 
+//                 type="text" 
+//                 name="batch" 
+//                 placeholder="Batch" 
+//                 value={formData.batch} 
+//                 onChange={handleChange} 
+//                 required 
+//                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//               />
+//             </div>
+//           )}
+
+//           {isSignUp && formData.role === "teacher" && (
+//             <input 
+//               type="text" 
+//               name="subject" 
+//               placeholder="Subject" 
+//               value={formData.subject} 
+//               onChange={handleChange} 
+//               required 
+//               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//             />
+//           )}
+
+//           <motion.button 
+//             whileHover={{ scale: 1.01 }}
+//             whileTap={{ scale: 0.99 }}
+//             type="submit" 
+//             className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
+//             disabled={loading}
+//           >
+//             {loading ? (
+//               <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mx-auto" />
+//             ) : (
+//               isSignUp ? "Sign Up" : "Sign In"
+//             )}
+//           </motion.button>
+//         </form>
+
+//         <div className="mt-6 text-center">
+//           <p className="text-gray-600">
+//             {isSignUp ? "Already have an account? " : "Don't have an account? "}
+//             <button 
+//               type="button"
+//               onClick={toggleAuthMode} 
+//               className="text-blue-600 hover:text-blue-700 font-medium hover:underline focus:outline-none"
+//             >
+//               {isSignUp ? "Sign In" : "Sign Up"}
+//             </button>
+//           </p>
+//         </div>
+//       </motion.div>
+//     </div>
+//   );
+// };
+
+// export default AuthPages;
+
+//_________________________________________________________________________________________________________
+//commented 
 
 // import React, { useState } from "react";
 // import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
