@@ -1,36 +1,83 @@
-// ReopenAssignment.jsx
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import './ReopenAssignment.css';
+import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { getToken } from "../../data/Token";
+import hostURL from "../../data/URL";
+import "./ReopenAssignment.css";
 
 const ReopenAssignment = () => {
-  const [selectedAssignment, setSelectedAssignment] = useState('');
+  const [selectedAssignment, setSelectedAssignment] = useState("");
+  const [assignments, setAssignments] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [reopenForAll, setReopenForAll] = useState(false);
-  const [newDueDate, setNewDueDate] = useState('');
-  const [reason, setReason] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [newDueDate, setNewDueDate] = useState("");
+  const [reason, setReason] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
-  // Dummy data (replace with API calls)
-  const assignments = [
-    { id: 1, title: "Assignment 1 - Bubble Sort", dueDate: "2024-02-15", subject: "Data Structures" },
-    { id: 2, title: "Assignment 2 - Prime Numbers", dueDate: "2024-02-20", subject: "Programming" },
-    { id: 3, title: "Assignment 3 - Calculator", dueDate: "2024-02-25", subject: "Programming" }
-  ];
+  const getISTDateTime = () => {
+    let now = new Date();
+    let istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
+    let istTime = new Date(now.getTime() + istOffset);
 
-  const students = [
-    { id: 1, name: "John Doe", rollNo: "CS001", status: "Submitted Late" },
-    { id: 2, name: "Jane Smith", rollNo: "CS002", status: "Not Submitted" },
-    { id: 3, name: "Mike Johnson", rollNo: "CS003", status: "Not Submitted" },
-    { id: 4, name: "Sarah Williams", rollNo: "CS004", status: "Submitted Late" }
-  ];
+    return istTime.toISOString().slice(0, 16); // Returns yyyy-MM-ddTHH:mm
+  };
+
+  const fetchAssignments = async () => {
+    setIsFetching(true);
+    setError("");
+
+    const token = getToken("token");
+    if (!token) {
+      setError("Authentication failed. Please log in again.");
+      setIsFetching(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${hostURL.link}/app/teacher/fetch-assignments`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch assignments");
+      }
+
+      const data = await response.json();
+
+      setAssignments(
+        data.assignments.map((assignment) => ({
+          id: assignment._id,
+          name: assignment.assignment_name,
+          students: assignment.student_ids.map(student => ({
+            id: student._id,
+            firstName: student.firstName,
+            lastName: student.lastName,
+            batchNo: student.batch, // Note: using batch field from the response
+            class: student.class
+          }))
+        }))
+      );
+    } catch (err) {
+      setError("Error fetching assignments: " + err.message);
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
   const handleStudentSelect = (studentId) => {
-    if (reopenForAll) return; // Prevent selection if "Reopen for All" is checked
-    
-    setSelectedStudents(prev => {
+    setSelectedStudents((prev) => {
       if (prev.includes(studentId)) {
-        return prev.filter(id => id !== studentId);
+        return prev.filter((id) => id !== studentId);
       }
       return [...prev, studentId];
     });
@@ -43,24 +90,90 @@ const ReopenAssignment = () => {
     }
   };
 
-  const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.rollNo.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStudents = selectedAssignment
+  ? assignments
+      .find((a) => a.id === selectedAssignment)
+      ?.students?.filter((student) =>
+        `${student.firstName} ${student.lastName} ${student.batchNo} ${student.class}`
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      ) || []
+  : [];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const reopenData = {
-      assignmentId: selectedAssignment,
-      students: reopenForAll ? 'all' : selectedStudents,
-      newDueDate,
-      reason
-    };
-    console.log('Reopen request:', reopenData);
-    // Add your API call here
+    const token = getToken("token");
+  
+    if (!token) {
+      setError("Authentication failed. Please log in again.");
+      return;
+    }
+  
+    if (!reopenForAll && selectedStudents.length === 0) {
+      setError("Please select at least one student or choose 'Reopen for All'");
+      return;
+    }
+  
+    setIsLoading(true);
+    try {
+      // For each selected student, make a separate API call
+      if (!reopenForAll) {
+        for (const studentId of selectedStudents) {
+          await axios.post(
+            `${hostURL.link}/app/teacher/reopen-assignments/${selectedAssignment}`,
+            {
+              studentId: studentId, // Changed from studentIds to studentId
+              reopenForAll: false,
+              newDueDate: newDueDate,
+              reason: reason,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
+      } else {
+        // If reopening for all students
+        await axios.post(
+          `${hostURL.link}/app/teacher/reopen-assignments/${selectedAssignment}`,
+          {
+            reopenForAll: true,
+            newDueDate: newDueDate,
+            reason: reason,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+  
+      // Reset form after successful submission
+      setSelectedAssignment("");
+      setSelectedStudents([]);
+      setReopenForAll(false);
+      setNewDueDate("");
+      setReason("");
+      setError("");
+    } catch (error) {
+      console.error("Error details:", error.response?.data);
+      setError(error.response?.data?.message || "Failed to reopen assignment");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  return (
+  const token = getToken("token");
+  if (!token) {
+    return <div className="error-message">Please log in to continue</div>;
+  }
+
+   return (
     <div className="page-wrapper">
       <nav className="navbar">
         <div className="nav-content">
@@ -76,23 +189,38 @@ const ReopenAssignment = () => {
 
       <div className="reopen-container">
         <h1 className="page-title">Reopen Assignment</h1>
+        
+        {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit} className="reopen-form">
           <div className="form-group">
-            <label htmlFor="assignment">Select Assignment</label>
-            <select
-              id="assignment"
-              value={selectedAssignment}
-              onChange={(e) => setSelectedAssignment(e.target.value)}
-              required
-            >
-              <option value="">Choose an assignment</option>
-              {assignments.map(assignment => (
-                <option key={assignment.id} value={assignment.id}>
-                  {assignment.title} - Due: {assignment.dueDate}
-                </option>
-              ))}
-            </select>
+            <div className="assignment-select-container">
+              <div className="select-wrapper">
+                <label htmlFor="assignment">Select Assignment</label>
+                <select
+                  id="assignment"
+                  value={selectedAssignment}
+                  onChange={(e) => setSelectedAssignment(e.target.value)}
+                  required
+                  className="assignment-select"
+                >
+                  <option value="">Choose an assignment</option>
+                  {assignments.map((assignment) => (
+                    <option key={assignment.id} value={assignment.id}>
+                      {assignment.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={fetchAssignments}
+                disabled={isFetching}
+                className="fetch-btn"
+              >
+                {isFetching ? "Fetching..." : "Fetch Assignments"}
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
@@ -101,6 +229,7 @@ const ReopenAssignment = () => {
               type="datetime-local"
               id="newDueDate"
               value={newDueDate}
+              min={getISTDateTime()}
               onChange={(e) => setNewDueDate(e.target.value)}
               required
             />
@@ -131,12 +260,13 @@ const ReopenAssignment = () => {
             </div>
           </div>
 
-          {!reopenForAll && (
+          {!reopenForAll && selectedAssignment && (
             <div className="student-selection-section">
+              <h3>Select Students</h3>
               <div className="search-container">
                 <input
                   type="text"
-                  placeholder="Search students by name or roll number..."
+                  placeholder="Search students by name, batch, or class..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="search-input"
@@ -144,32 +274,35 @@ const ReopenAssignment = () => {
               </div>
 
               <div className="students-list">
-                {filteredStudents.map(student => (
-                  <div
-                    key={student.id}
-                    className={`student-card ${selectedStudents.includes(student.id) ? 'selected' : ''}`}
-                    onClick={() => handleStudentSelect(student.id)}
-                  >
-                    <div className="student-info">
-                      <h3>{student.name}</h3>
-                      <p>Roll No: {student.rollNo}</p>
-                    </div>
-                    <div className="student-status">
-                      <span className={`status-badge ${student.status.toLowerCase().replace(' ', '-')}`}>
-                        {student.status}
+                {filteredStudents.map((student) => (
+                  <div key={student.id} className="student-card">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.includes(student.id)}
+                        onChange={() => handleStudentSelect(student.id)}
+                      />
+                      <span>{student.firstName} {student.lastName}</span>
+                      <span className="student-details">
+                        Class: {student.class} | Batch: {student.batchNo}
                       </span>
-                    </div>
+                    </label>
                   </div>
                 ))}
+                {filteredStudents.length === 0 && (
+                  <div className="no-students-message">
+                    No students found matching your search criteria
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           <div className="form-actions">
-            <button type="submit" className="submit-btn">
-              Reopen Assignment
+            <button type="submit" className="submit-btn" disabled={isLoading}>
+              {isLoading ? "Reopening..." : "Reopen Assignment"}
             </button>
-            <button type="button" className="cancel-btn">
+            <button type="button" className="cancel-btn" disabled={isLoading}>
               Cancel
             </button>
           </div>
@@ -180,3 +313,4 @@ const ReopenAssignment = () => {
 };
 
 export default ReopenAssignment;
+
