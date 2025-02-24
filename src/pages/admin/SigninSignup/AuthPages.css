@@ -58,7 +58,7 @@
 }
 
 .role-button.active {
-    background-color: white;
+    background-color: black;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -103,6 +103,30 @@
     border-radius: 8px;
     font-size: 16px;
     transition: all 0.2s ease;
+    color: #1a1a1a;
+}
+
+/* Placeholder styles */
+.input-group input::placeholder,
+.input-group select::placeholder,
+.subject-input::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+/* Firefox placeholder styles */
+.input-group input::-moz-placeholder,
+.input-group select::-moz-placeholder,
+.subject-input::-moz-placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+/* Microsoft Edge placeholder styles */
+.input-group input::-ms-input-placeholder,
+.input-group select::-ms-input-placeholder,
+.subject-input::-ms-input-placeholder {
+    color: #94a3b8;
 }
 
 .subject-input {

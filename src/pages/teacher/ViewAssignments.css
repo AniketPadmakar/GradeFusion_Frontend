@@ -1,0 +1,230 @@
+.assignments-container {
+    padding: 2rem;
+    background-color: #ffffff;
+    min-height: 100vh;
+    margin-left: 460px;
+}
+
+.assignments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.assignments-header h1 {
+    font-size: 2rem;
+    color: #333;
+    margin: 0;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.create-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    margin-left: 45px;
+}
+
+.create-button:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+}
+
+.button-icon {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.assignments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    animation: slideUp 0.5s ease-out;
+}
+
+.assignment-card {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.assignment-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.assignment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.assignment-header h2 {
+    font-size: 1.2rem;
+    color: #333;
+    margin: 0;
+    flex: 1;
+}
+
+.status {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status.active {
+    background-color: #e7f5e7;
+    color: #2d882d;
+}
+
+.status.draft {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.assignment-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.due-date {
+    color: #d32f2f;
+    font-weight: 500;
+}
+
+.assignment-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-button {
+    flex: 1;
+    padding: 0.5rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+}
+
+.action-button.edit {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.action-button.view {
+    background-color: #f5f5f5;
+    color: #424242;
+}
+
+.action-button.delete {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.action-button:hover {
+    filter: brightness(0.95);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media screen and (max-width: 1200px) {
+    .assignments-container {
+        margin-left: 0;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .assignments-container {
+        padding: 1rem;
+    }
+
+    .assignments-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .create-button {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+    }
+
+    .assignments-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .assignment-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .status {
+        align-self: flex-start;
+    }
+
+    .assignment-details {
+        gap: 0.8rem;
+    }
+
+    .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+
+    .assignment-actions {
+        flex-direction: column;
+    }
+
+    .action-button {
+        width: 100%;
+    }
+}

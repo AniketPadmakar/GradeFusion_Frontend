@@ -40,8 +40,8 @@ const TeacherDashboard = () => {
                 </header>
                 <main className="dashboard-main">
                     <section className="quick-actions">
-                        <button className="action-button create-btn" onClick={() => navigate('/CreateAssignment')}>
-                            Create New Assignment
+                        <button className="action-button create-btn" onClick={() => navigate('/ViewAssignments')}>
+                        View Assignment
                         </button>
                         <button className="action-button view-btn" onClick={() => navigate('/StudentSubmissionView')}>
                             View Student Responses

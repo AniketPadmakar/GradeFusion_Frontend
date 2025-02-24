@@ -12,7 +12,7 @@ import LiveAssignmentStart from './pages/student/LiveAssignmentStart';
 import LiveAssignmentPage from './pages/student/LiveAssignmentPage';
 import ViewQuestions from './pages/teacher/ViewQuestions';
 import CreateQuestion from './pages/teacher/CreateQuestion';
-
+import ViewAssignments from './pages/teacher/ViewAssignments';
 
 function App() {
   return (
@@ -30,6 +30,7 @@ function App() {
         <Route path="/LiveAssignmentPage" element={<LiveAssignmentPage />} />
         <Route path="/ViewQuestions" element={<ViewQuestions />} />
         <Route path="/CreateQuestion" element={<CreateQuestion />} />
+        <Route path="/ViewAssignments" element={<ViewAssignments />} />
       </Routes>
     </Router>
   );

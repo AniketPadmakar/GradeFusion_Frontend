@@ -16,13 +16,14 @@ const ReopenAssignment = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const getISTDateTime = () => {
     let now = new Date();
-    let istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
+    let istOffset = 5.5 * 60 * 60 * 1000;
     let istTime = new Date(now.getTime() + istOffset);
-
-    return istTime.toISOString().slice(0, 16); // Returns yyyy-MM-ddTHH:mm
+    return istTime.toISOString().slice(0, 16);
   };
 
   const fetchAssignments = async () => {
@@ -62,7 +63,7 @@ const ReopenAssignment = () => {
             id: student._id,
             firstName: student.firstName,
             lastName: student.lastName,
-            batchNo: student.batch, // Note: using batch field from the response
+            batchNo: student.batch,
             class: student.class
           }))
         }))
@@ -91,14 +92,14 @@ const ReopenAssignment = () => {
   };
 
   const filteredStudents = selectedAssignment
-  ? assignments
-      .find((a) => a.id === selectedAssignment)
-      ?.students?.filter((student) =>
-        `${student.firstName} ${student.lastName} ${student.batchNo} ${student.class}`
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      ) || []
-  : [];
+    ? assignments
+        .find((a) => a.id === selectedAssignment)
+        ?.students?.filter((student) =>
+          `${student.firstName} ${student.lastName} ${student.batchNo} ${student.class}`
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
+        ) || []
+    : [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -116,13 +117,12 @@ const ReopenAssignment = () => {
   
     setIsLoading(true);
     try {
-      // For each selected student, make a separate API call
       if (!reopenForAll) {
         for (const studentId of selectedStudents) {
           await axios.post(
             `${hostURL.link}/app/teacher/reopen-assignments/${selectedAssignment}`,
             {
-              studentId: studentId, // Changed from studentIds to studentId
+              studentId: studentId,
               reopenForAll: false,
               newDueDate: newDueDate,
               reason: reason,
@@ -135,8 +135,8 @@ const ReopenAssignment = () => {
             }
           );
         }
+        setSuccessMessage(`Assignment reopened for ${selectedStudents.length} selected student${selectedStudents.length > 1 ? 's' : ''}`);
       } else {
-        // If reopening for all students
         await axios.post(
           `${hostURL.link}/app/teacher/reopen-assignments/${selectedAssignment}`,
           {
@@ -151,9 +151,11 @@ const ReopenAssignment = () => {
             },
           }
         );
+        setSuccessMessage("Assignment reopened for all students");
       }
   
-      // Reset form after successful submission
+      setShowSuccessModal(true);
+      
       setSelectedAssignment("");
       setSelectedStudents([]);
       setReopenForAll(false);
@@ -168,12 +170,27 @@ const ReopenAssignment = () => {
     }
   };
 
+  const SuccessModal = ({ message, onClose }) => (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <div className="success-icon">✓</div>
+          <h2 className="modal-title">Success!</h2>
+        </div>
+        <p className="modal-message">{message}</p>
+        <button className="modal-button" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </div>
+  );
+
   const token = getToken("token");
   if (!token) {
     return <div className="error-message">Please log in to continue</div>;
   }
 
-   return (
+  return (
     <div className="page-wrapper">
       <nav className="navbar">
         <div className="nav-content">
@@ -308,9 +325,15 @@ const ReopenAssignment = () => {
           </div>
         </form>
       </div>
+
+      {showSuccessModal && (
+        <SuccessModal
+          message={successMessage}
+          onClose={() => setShowSuccessModal(false)}
+        />
+      )}
     </div>
   );
 };
 
 export default ReopenAssignment;
-
