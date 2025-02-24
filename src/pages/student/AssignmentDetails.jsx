@@ -1,4 +1,3 @@
-// AssignmentDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './AssignmentDetails.css';
@@ -7,22 +6,27 @@ const AssignmentDetails = () => {
     // Mock data - replace with actual API call
     const [assignment, setAssignment] = useState({
         title: "Data Structures Implementation",
-        description: "Implement a binary search tree with all basic operations including insertion, deletion, and traversal.",
+        description: "Final Assignment for Data Structures Course - Spring 2025",
         totalMarks: 100,
-        scheduledDate: "2025-03-01",
         dueDate: "2025-03-15",
-        timeLimit: "3 hours",
-        instructorName: "Dr. Sarah Johnson",
+        teacherName: "Dr. Sarah Johnson",
         difficulty: "Medium",
-        prerequisites: [
-            "Basic understanding of trees",
-            "Knowledge of recursive algorithms",
-            "Proficiency in chosen programming language"
-        ],
-        resources: [
-            "Lecture notes on BST",
-            "Reference implementation guidelines",
-            "Testing framework documentation"
+        questions: [
+            {
+                id: 1,
+                question: "Implement a binary search tree with insertion operation",
+                marks: 30,
+            },
+            {
+                id: 2,
+                question: "Add deletion functionality to the BST implementation",
+                marks: 35,
+            },
+            {
+                id: 3,
+                question: "Implement traversal methods (in-order, pre-order, post-order)",
+                marks: 35,
+            }
         ]
     });
 
@@ -84,50 +88,41 @@ const AssignmentDetails = () => {
 
                 <div className="assignment-grid">
                     <div className="assignment-card timeline-card">
-                        <h2>Timeline</h2>
-                        <div className="timeline-item">
-                            <span className="timeline-label">Scheduled Date:</span>
-                            <span className="timeline-value">{new Date(assignment.scheduledDate).toLocaleDateString()}</span>
-                        </div>
+                        <h2>Assignment Details</h2>
                         <div className="timeline-item">
                             <span className="timeline-label">Due Date:</span>
                             <span className="timeline-value">{new Date(assignment.dueDate).toLocaleDateString()}</span>
                         </div>
                         <div className="timeline-item">
-                            <span className="timeline-label">Time Limit:</span>
-                            <span className="timeline-value">{assignment.timeLimit}</span>
+                            <span className="timeline-label">Total Marks:</span>
+                            <span className="timeline-value">{assignment.totalMarks}</span>
                         </div>
                     </div>
 
-                    <div className="assignment-card instructor-card">
-                        <h2>Instructor</h2>
-                        <p>{assignment.instructorName}</p>
+                    <div className="assignment-card teacher-card">
+                        <h2>Teacher Information</h2>
+                        <div className="timeline-item">
+                            <span className="timeline-label">Name:</span>
+                            <span className="timeline-value">{assignment.teacherName}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="assignment-grid">
-                    <div className="assignment-card prerequisites-card">
-                        <h2>Prerequisites</h2>
-                        <ul>
-                            {assignment.prerequisites.map((prereq, index) => (
-                                <li key={index}>{prereq}</li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div className="assignment-card resources-card">
-                        <h2>Resources</h2>
-                        <ul>
-                            {assignment.resources.map((resource, index) => (
-                                <li key={index}>{resource}</li>
-                            ))}
-                        </ul>
-                    </div>
+                <div className="assignment-card questions-card">
+                    <h2>Questions</h2>
+                    {assignment.questions.map((question) => (
+                        <div key={question.id} className="timeline-item">
+                            <div className="question-content">
+                                <span className="question-number">Question {question.id}</span>
+                                <p>{question.question}</p>
+                            </div>
+                            <span className="question-marks">{question.marks} marks</span>
+                        </div>
+                    ))}
                 </div>
 
                 <div className="action-buttons">
                     <button className="start-button">Start Assignment</button>
-                    <button className="save-button">Save for Later</button>
                 </div>
             </div>
         </>

@@ -317,3 +317,34 @@
         margin-top: 5px;
     }
 }
+.teacher-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.questions-card {
+    margin-top: 20px;
+}
+
+.question-content {
+    flex: 1;
+    padding-right: 20px;
+}
+
+.question-number {
+    font-weight: 600;
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.question-marks {
+    background: #3498db;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
