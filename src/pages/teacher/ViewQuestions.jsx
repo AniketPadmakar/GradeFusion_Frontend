@@ -109,7 +109,7 @@ const ViewQuestions = () => {
                                 </span>
                             </div>
                             <div className="question-actions">
-                                <button className="action-button edit" onClick={() => navigate("/EditQuestion")}>
+                                <button className="action-button edit" onClick={() => handleEdit(question._id)}>
                                     Edit
                                 </button>
                                 <button className="action-button view" onClick={() => handleView(question._id)}>View</button>

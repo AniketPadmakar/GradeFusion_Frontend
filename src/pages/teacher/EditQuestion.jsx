@@ -1,161 +1,227 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import './EditQuestion.css';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getToken } from "../../data/Token";
+import hostURL from "../../data/URL";
+import './CreateQuestion.css';
 
 const EditQuestion = () => {
-    const navigate = useNavigate();
     const { id } = useParams();
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState(null);
+    const [originalData, setOriginalData] = useState(null);  // Store original data
+    const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const [question, setQuestion] = useState({
-        title: '',
-        difficulty: 'Easy',
-        category: '',
-        description: '',
-        sampleInput: '',
-        sampleOutput: '',
-        constraints: ''
-    });
-
-    // Simulating fetching question data - replace with actual API call
     useEffect(() => {
-        // Mock data - replace with your actual data fetching logic
-        const mockQuestion = {
-            title: "Two Sum Problem",
-            difficulty: "Easy",
-            category: "Arrays",
-            description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-            sampleInput: "[2,7,11,15], target = 9",
-            sampleOutput: "[0,1]",
-            constraints: "2 <= nums.length <= 104\n-109 <= nums[i] <= 109\n-109 <= target <= 109"
+        const fetchQuestion = async () => {
+            const token = getToken("token");
+            if (!token) {
+                setMessage('Authentication required.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${hostURL.link}/app/teacher/fetch-question/${id}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    const formattedData = {
+                        ...data,
+                        example_input: data.example_input_output?.[0]?.input || "",
+                        example_output: data.example_input_output?.[0]?.output || "",
+                        test_cases: data.test_cases || []
+                    };
+                    setFormData(formattedData);
+                    setOriginalData(formattedData);  // Save original data
+                } else {
+                    setMessage(data.message || 'Failed to fetch question.');
+                }
+            } catch (error) {
+                setMessage('Error fetching question.');
+            }
         };
-        setQuestion(mockQuestion);
+
+        fetchQuestion();
     }, [id]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setQuestion(prev => ({
+        
+        setFormData(prev => {
+            if (name === "example_input" || name === "example_output") {
+                return {
+                    ...prev,
+                    [name]: value,
+                    example_input_output: [{ 
+                        input: name === "example_input" ? value : prev.example_input_output?.[0]?.input || "",
+                        output: name === "example_output" ? value : prev.example_input_output?.[0]?.output || ""
+                    }]
+                };
+            }
+            return {
+                ...prev,
+                [name]: value
+            };
+        });
+    };
+
+    const handleTestCaseChange = (index, field, value) => {
+        setFormData(prev => ({
             ...prev,
-            [name]: value
+            test_cases: prev.test_cases.map((tc, i) =>
+                i === index ? { ...tc, [field]: value } : tc
+            )
         }));
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        // Add your update logic here
-        console.log('Updated question:', question);
-        navigate('/ViewQuestions');
+    const isFormChanged = () => {
+        return JSON.stringify(formData) !== JSON.stringify(originalData);
     };
 
-    return (
-        <div className="edit-container">
-            <div className="edit-content">
-                <header className="edit-header">
-                    <h1>Edit Question</h1>
-                    <button className="back-button" onClick={() => navigate('/ViewQuestions')}>
-                        Back to Questions
-                    </button>
-                </header>
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage('');
 
-                <form className="edit-form" onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label htmlFor="title">Question Title</label>
-                        <input
-                            type="text"
-                            id="title"
-                            name="title"
-                            value={question.title}
+        const token = getToken("token");
+        if (!token) {
+            setMessage('Authentication required.');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${hostURL.link}/app/teacher/update/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    ...formData,
+                    example_input_output: [{ input: formData.example_input, output: formData.example_output }]
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setMessage('Question updated successfully!');
+                navigate('/ViewQuestions');
+            } else {
+                setMessage(data.message || 'Failed to update question.');
+            }
+        } catch (error) {
+            setMessage('Error updating question.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!formData) return <p>Loading...</p>;
+
+    return (
+        <div className="create-question-container">
+            <h1>Edit Question</h1>
+            {message && <p className="message">{message}</p>}
+
+            <form onSubmit={handleUpdate} className="question-form">
+                <div className="form-section">
+                    <label>Question Text</label>
+                    <textarea
+                        name="question_text"
+                        value={formData.question_text}
+                        onChange={handleInputChange}
+                        required
+                    />
+                </div>
+
+                <div className="form-row">
+                    <div className="form-section">
+                        <label>Example Input</label>
+                        <textarea
+                            name="example_input"
+                            value={formData.example_input}
                             onChange={handleInputChange}
                             required
                         />
                     </div>
+                    <div className="form-section">
+                        <label>Example Output</label>
+                        <textarea
+                            name="example_output"
+                            value={formData.example_output}
+                            onChange={handleInputChange}
+                            required
+                        />
+                    </div>
+                </div>
 
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label htmlFor="difficulty">Difficulty</label>
-                            <select
-                                id="difficulty"
-                                name="difficulty"
-                                value={question.difficulty}
-                                onChange={handleInputChange}
+                <div className="form-row">
+                    <div className="form-section">
+                        <label>Marks</label>
+                        <input
+                            type="number"
+                            name="marks"
+                            value={formData.marks}
+                            onChange={handleInputChange}
+                            required
+                        />
+                    </div>
+                    <div className="form-section">
+                        <label>Subject</label>
+                        <select
+                            name="subject"
+                            value={formData.subject}
+                            onChange={handleInputChange}
+                            required
+                        >
+                            <option value="algorithms">Algorithms</option>
+                            <option value="data-structures">Data Structures</option>
+                            <option value="programming">Programming Basics</option>
+                            <option value="database">Database</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h2>Test Cases</h2>
+                {formData.test_cases.map((tc, index) => (
+                    <div key={index} className="testcase-container">
+                        <div className="form-section">
+                            <label>Input</label>
+                            <textarea
+                                value={tc.input}
+                                onChange={(e) => handleTestCaseChange(index, 'input', e.target.value)}
                                 required
-                            >
-                                <option value="Easy">Easy</option>
-                                <option value="Medium">Medium</option>
-                                <option value="Hard">Hard</option>
-                            </select>
+                            />
                         </div>
-
-                        <div className="form-group">
-                            <label htmlFor="category">Category</label>
-                            <input
-                                type="text"
-                                id="category"
-                                name="category"
-                                value={question.category}
-                                onChange={handleInputChange}
+                        <div className="form-section">
+                            <label>Expected Output</label>
+                            <textarea
+                                value={tc.expected_output}
+                                onChange={(e) => handleTestCaseChange(index, 'expected_output', e.target.value)}
                                 required
                             />
                         </div>
                     </div>
+                ))}
 
-                    <div className="form-group">
-                        <label htmlFor="description">Description</label>
-                        <textarea
-                            id="description"
-                            name="description"
-                            value={question.description}
-                            onChange={handleInputChange}
-                            required
-                            rows="4"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="sampleInput">Sample Input</label>
-                        <textarea
-                            id="sampleInput"
-                            name="sampleInput"
-                            value={question.sampleInput}
-                            onChange={handleInputChange}
-                            required
-                            rows="2"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="sampleOutput">Sample Output</label>
-                        <textarea
-                            id="sampleOutput"
-                            name="sampleOutput"
-                            value={question.sampleOutput}
-                            onChange={handleInputChange}
-                            required
-                            rows="2"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="constraints">Constraints</label>
-                        <textarea
-                            id="constraints"
-                            name="constraints"
-                            value={question.constraints}
-                            onChange={handleInputChange}
-                            required
-                            rows="3"
-                        />
-                    </div>
-
-                    <div className="form-actions">
-                        <button type="button" className="cancel-button" onClick={() => navigate('/ViewQuestions')}>
-                            Cancel
+                <div className="form-actions">
+                    <button type="button" className="cancel-btn" onClick={() => navigate('/ViewQuestions')}>
+                        Cancel
+                    </button>
+                    
+                    {isFormChanged() && (  // Only show Update button if form is changed
+                        <button type="submit" className="submit-btn" disabled={loading}>
+                            {loading ? 'Updating...' : 'Update Question'}
                         </button>
-                        <button type="submit" className="save-button">
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
-            </div>
+                    )}
+                </div>
+            </form>
         </div>
     );
 };

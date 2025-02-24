@@ -37,7 +37,7 @@ function App() {
         <Route path="/CreateQuestion" element={<CreateQuestion />} />
         <Route path="/ViewAssignments" element={<ViewAssignments />} />
         <Route path="/ViewAssignmentSpecific/:id" element={<ViewAssignmentSpecific />} />
-        <Route path="/EditQuestion" element={<EditQuestion/>} />
+        <Route path="/edit-question/:id" element={<EditQuestion />} />
         <Route path="/EditAssignment/:id" element={<EditAssignment/>} />
       </Routes>
     </Router>
