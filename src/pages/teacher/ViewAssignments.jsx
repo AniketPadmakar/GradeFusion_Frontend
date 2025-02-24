@@ -62,7 +62,9 @@ const ViewAssignments = () => {
                             </div>
                         </div>
                         <div className="assignment-actions">
-                            <button className="action-button edit">Edit</button>
+                        <button className="action-button edit" onClick={() => navigate("/EditAssignment")}>
+      Edit
+    </button>
                             <button className="action-button view">View</button>
                             <button className="action-button delete">Delete</button>
                         </div>

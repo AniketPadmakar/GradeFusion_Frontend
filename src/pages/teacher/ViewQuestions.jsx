@@ -54,7 +54,9 @@ const ViewQuestions = () => {
                             <span className="date">Created: {question.dateCreated}</span>
                         </div>
                         <div className="question-actions">
-                            <button className="action-button edit">Edit</button>
+                        <button className="action-button edit" onClick={() => navigate("/EditQuestion")}>
+      Edit
+    </button>
                             <button className="action-button view">View</button>
                             <button className="action-button delete">Delete</button>
                         </div>
