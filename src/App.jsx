@@ -12,6 +12,8 @@ import LiveAssignmentStart from './pages/student/LiveAssignmentStart';
 import LiveAssignmentPage from './pages/student/LiveAssignmentPage';
 import ViewQuestions from './pages/teacher/ViewQuestions';
 import CreateQuestion from './pages/teacher/CreateQuestion';
+import ViewQuestionspecific from './pages/teacher/ViewQuestionspecific';
+
 import ViewAssignments from './pages/teacher/ViewAssignments';
 import EditQuestion from './pages/teacher/EditQuestion';
 import EditAssignment from './pages/teacher/EditAssignment';
@@ -31,6 +33,7 @@ function App() {
         <Route path="/LiveAssignmentStart" element={<LiveAssignmentStart />} />
         <Route path="/LiveAssignmentPage" element={<LiveAssignmentPage />} />
         <Route path="/ViewQuestions" element={<ViewQuestions />} />
+        <Route path="/view-question/:id" element={<ViewQuestionspecific />} />
         <Route path="/CreateQuestion" element={<CreateQuestion />} />
         <Route path="/ViewAssignments" element={<ViewAssignments />} />
         <Route path="/EditQuestion" element={<EditQuestion/>} />
