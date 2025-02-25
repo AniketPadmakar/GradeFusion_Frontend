@@ -11,19 +11,80 @@ const CreateQuestion = () => {
         example_output: '',
         marks: '',
         subject: '',
-        test_cases: [{ input: '', output: '' }]
+        test_cases: Array(5).fill({ input: '', output: '' }) // Default 5 test cases
     });
 
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Add new test case
-    const addTestCase = () => {
-        setFormData(prev => ({
-            ...prev,
-            test_cases: [...prev.test_cases, { input: '', output: '' }]
-        }));
+    const API_URL = import.meta.env.VITE_GEMINI_API_URL;
+
+    const fetchGeneratedTestCases = async () => {
+        if (!formData.question_text || !formData.example_input || !formData.example_output) {
+            setMessage("Please fill in the Question Text, Example Input, and Example Output before generating test cases.");
+            return;
+        }
+    
+        setLoading(true); // Show loading overlay
+    
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ 
+                            text: `Go through the question text, understand it along with the example input and output, and generate 5 test cases in the format:
+                            {
+                                "test_cases": [
+                                    { "input": "testcase1 input", "output": "testcase1 output" },
+                                    { "input": "testcase2 input", "output": "testcase2 output" },
+                                    { "input": "testcase3 input", "output": "testcase3 output" },
+                                    { "input": "testcase4 input", "output": "testcase4 output" },
+                                    { "input": "testcase5 input", "output": "testcase5 output" }
+                                ]
+                            }
+    
+                            The test cases should match the pattern observed in the example input and output. 
+    
+                            Question: ${formData.question_text}
+                            Example Input: ${formData.example_input}
+                            Example Output: ${formData.example_output}`
+                        }]
+                    }]
+                })
+            });
+    
+            const data = await response.json();
+            
+            if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                try {
+                    // Extract JSON from API response
+                    const jsonResponse = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g, "").trim());
+    
+                    // Check if response contains valid test cases
+                    if (jsonResponse.test_cases && Array.isArray(jsonResponse.test_cases)) {
+                        setFormData(prev => ({
+                            ...prev,
+                            test_cases: jsonResponse.test_cases
+                        }));
+                    } else {
+                        setMessage("Invalid test case format received from API.");
+                    }
+                } catch (parseError) {
+                    setMessage("Error parsing test cases from API response.");
+                }
+            } else {
+                setMessage("No test cases received from API.");
+            }
+        } catch (error) {
+            setMessage("Error fetching generated test cases.");
+            console.error("Error:", error);
+        } finally {
+            setLoading(false); // Hide loading overlay
+        }
     };
+
 
     // Remove test case
     const removeTestCase = (index) => {
@@ -102,6 +163,13 @@ const CreateQuestion = () => {
     };
 
     return (
+        <>
+        {loading && (
+            <div className="loading-overlay">
+                <div className="loading-spinner"></div>
+                <p>Generating test cases, please wait...</p>
+            </div>
+        )}        
         <div className="create-question-container">
             <div className="form-header">
                 <h1>Create New Question</h1>
@@ -179,9 +247,10 @@ const CreateQuestion = () => {
                 <div className="testcases-section">
                     <div className="testcases-header">
                         <h2>Test Cases</h2>
-                        <button type="button" onClick={addTestCase} className="add-testcase-btn">
-                            Add Test Case
-                        </button>
+                        <button type="button" onClick={fetchGeneratedTestCases} className="add-testcase-btn" disabled={loading}>
+    {loading ? 'Generating...' : 'Generate Test Cases'}
+</button>
+
                     </div>
 
                     {formData.test_cases.map((testcase, index) => (
@@ -230,6 +299,7 @@ const CreateQuestion = () => {
                 </div>
             </form>
         </div>
+        </>
     );
 };
 
