@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './TeacherDashboard.css';
+import { getToken,deleteToken } from "../../data/Token";
 
 const TeacherDashboard = () => {
     const [showNewAssignment, setShowNewAssignment] = useState(false);
     const teacherName = "Dr. Sarah Johnson";
     const navigate = useNavigate();
+
+     // Add this function to handle logout
+         const handleLogout = () => {
+            // Delete the token from cookies
+            deleteToken("token");
+            // Redirect to home page
+            navigate('/');
+        };
+    
 
     return (
         <>
@@ -16,7 +26,7 @@ const TeacherDashboard = () => {
                         <Link to="/" className="nav-link active">Home</Link>
                         <Link to="/about" className="nav-link">About</Link>
                         <Link to="/contact" className="nav-link">Contact</Link>
-                        <Link to="/signup" className="nav-link signup-btn">Log out</Link>
+                        <button className="nav-link signup-btn" onClick={handleLogout}>Log out</button>
                     </div>
                 </div>
             </nav>

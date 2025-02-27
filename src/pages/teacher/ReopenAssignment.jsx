@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { getToken } from "../../data/Token";
+import { getToken,deleteToken } from "../../data/Token";
 import hostURL from "../../data/URL";
 import "./ReopenAssignment.css";
 
@@ -18,6 +18,14 @@ const ReopenAssignment = () => {
   const [isFetching, setIsFetching] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Add this function to handle logout
+       const handleLogout = () => {
+          // Delete the token from cookies
+          deleteToken("token");
+          // Redirect to home page
+          navigate('/');
+      };
 
   const getISTDateTime = () => {
     let now = new Date();
@@ -199,7 +207,7 @@ const ReopenAssignment = () => {
             <Link to="/" className="nav-link">Home</Link>
             <Link to="/about" className="nav-link">About</Link>
             <Link to="/contact" className="nav-link">Contact</Link>
-            <Link to="/signup" className="nav-link signup-btn">Sign Up</Link>
+            <button className="nav-link signup-btn" onClick={handleLogout}>Log out</button>
           </div>
         </div>
       </nav>

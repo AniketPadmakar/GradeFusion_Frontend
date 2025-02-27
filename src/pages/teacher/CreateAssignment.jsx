@@ -1,7 +1,8 @@
 // CreateAssignment.jsx
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { getToken } from "../../data/Token";
+import { useNavigate } from "react-router-dom";
+import { getToken,deleteToken } from "../../data/Token";
 import hostURL from "../../data/URL";
 import "./CreateAssignment.css";
 
@@ -18,6 +19,17 @@ const CreateAssignment = () => {
     attachments: [],
   });
 
+  const navigate = useNavigate();
+
+  // Add this function to handle logout
+  const handleLogout = () => {
+    // Delete the token from cookies
+    deleteToken("token");
+    // Redirect to home page
+    navigate('/');
+};
+
+
   const getISTDateTime = () => {
     let now = new Date();
     let istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
@@ -25,6 +37,8 @@ const CreateAssignment = () => {
     
     return istTime.toISOString().slice(0, 16); // Returns yyyy-MM-ddTHH:mm
   };
+
+   
   
 
   // Replace the hardcoded availableQuestions with state
@@ -171,9 +185,7 @@ const CreateAssignment = () => {
             <Link to="/contact" className="nav-link">
               Contact
             </Link>
-            <Link to="/signup" className="nav-link signup-btn">
-              Sign Up
-            </Link>
+            <button className="nav-link signup-btn" onClick={handleLogout}>Log out</button>
           </div>
         </div>
       </nav>

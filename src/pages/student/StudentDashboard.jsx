@@ -182,7 +182,7 @@
 // export default StudentDashboard;
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getToken } from "../../data/Token";
+import { getToken,deleteToken } from "../../data/Token";
 import hostURL from "../../data/URL";
 import '../student/StudentDashboard.css';
 
@@ -191,6 +191,14 @@ const StudentDash = () => {
     const [assignments, setAssignments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+     // Add this function to handle logout
+     const handleLogout = () => {
+        // Delete the token from cookies
+        deleteToken("token");
+        // Redirect to home page
+        navigate('/');
+    };
 
     useEffect(() => {
         const fetchAssignments = async () => {
@@ -234,7 +242,7 @@ const StudentDash = () => {
                         <button className="nav-link" onClick={() => navigate('/')}>Home</button>
                         <button className="nav-link" onClick={() => navigate('/about')}>About</button>
                         <button className="nav-link" onClick={() => navigate('/contact')}>Contact</button>
-                        <button className="nav-link signup-btn" onClick={() => navigate('/logout')}>Log out</button>
+                        <button className="nav-link signup-btn" onClick={handleLogout}>Log out</button>
                     </div>
                 </div>
             </nav>

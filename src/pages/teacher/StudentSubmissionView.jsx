@@ -2,6 +2,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './StudentSubmissionView.css';
+import { useNavigate } from "react-router-dom";
+import { getToken,deleteToken } from "../../data/Token";
+
 
 const StudentSubmissionView = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -14,6 +17,15 @@ const StudentSubmissionView = () => {
     status: 'all',
     studentName: ''
   });
+
+  const navigate = useNavigate();// Add this function to handle logout
+  const handleLogout = () => {
+   // Delete the token from cookies
+   deleteToken("token");
+   // Redirect to home page
+   navigate('/');
+};
+
 
   // Simulated data - Replace with actual API call
   useEffect(() => {
@@ -119,7 +131,7 @@ const StudentSubmissionView = () => {
               <Link to="/" className="nav-link active">Home</Link>
               <Link to="/about" className="nav-link">About</Link>
               <Link to="/contact" className="nav-link">Contact</Link>
-              <Link to="/signup" className="nav-link signup-btn">Sign Up</Link>
+              <button className="nav-link signup-btn" onClick={handleLogout}>Log out</button>
             </div>
           </div>
         </nav>
@@ -140,7 +152,7 @@ const StudentSubmissionView = () => {
             <Link to="/" className="nav-link active">Home</Link>
             <Link to="/about" className="nav-link">About</Link>
             <Link to="/contact" className="nav-link">Contact</Link>
-            <Link to="/signup" className="nav-link signup-btn">Sign Up</Link>
+              <button className="nav-link signup-btn" onClick={handleLogout}>Log out</button>
           </div>
         </div>
       </nav>
