@@ -265,7 +265,7 @@ const StudentDash = () => {
                             {assignments.map((assignment) => (
                                 <div key={assignment._id} className="assignment-card">
                                     <h3>{assignment.assignment_name}</h3>
-                                    <button className="view-details" onClick={() => navigate(`/ViewAssignment/${assignment._id}`)}>View Details →</button>
+                                    <button className="view-details" onClick={() => navigate(`/LiveAssignmentStart/${assignment._id}`)}>View Details →</button>
                                 </div>
                             ))}
                         </div>

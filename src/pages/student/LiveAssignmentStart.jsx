@@ -33,7 +33,7 @@ const LiveAssignmentStart = () => {
         setIsStarting(true);
         // Add a slight delay to show the animation
         setTimeout(() => {
-            navigate('/assignment/live-test'); // Navigate to the actual test page
+            navigate('/LiveAssignmentPage'); // Navigate to the actual test page
         }, 1000);
     };
 
