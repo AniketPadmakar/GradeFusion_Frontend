@@ -6,11 +6,12 @@ import './LiveAssignmentPage.css';
 const LiveAssignmentPage = () => {
     const { assignmentId } = useParams();
     const editorRef = useRef(null);
-    const [isFullScreen, setIsFullScreen] = useState(true);
+    const [isFullScreen, setIsFullScreen] = useState(false);
     const [activeTab, setActiveTab] = useState('testcase'); // 'testcase' or 'result'
     const [activeTestCase, setActiveTestCase] = useState(1);
     const [horizontalSplit, setHorizontalSplit] = useState(50); // Default 50% split between problem and editor
     const [verticalSplit, setVerticalSplit] = useState(70); // Default 70% editor, 30% testcase
+    const containerRef = useRef(null);
 
     // Refs for resizing
     const isHorizontalResizing = useRef(false);
@@ -20,44 +21,100 @@ const LiveAssignmentPage = () => {
     const startHorizontalSplit = useRef(horizontalSplit);
     const startVerticalSplit = useRef(verticalSplit);
 
-    // Request full screen on component mount
+    // Request full screen on component mount and handle visibility change
     useEffect(() => {
         const enterFullScreen = async () => {
             try {
-                if (document.documentElement.requestFullscreen) {
-                    await document.documentElement.requestFullscreen();
-                } else if (document.documentElement.mozRequestFullScreen) {
-                    await document.documentElement.mozRequestFullScreen();
-                } else if (document.documentElement.webkitRequestFullscreen) {
-                    await document.documentElement.webkitRequestFullscreen();
-                } else if (document.documentElement.msRequestFullscreen) {
-                    await document.documentElement.msRequestFullscreen();
+                const elem = document.documentElement;
+                
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    await elem.mozRequestFullScreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    await elem.msRequestFullscreen();
                 }
-                setIsFullScreen(true);
             } catch (err) {
                 console.error("Error attempting to enable fullscreen:", err);
             }
         };
         
-        enterFullScreen();
+        // Check and enforce fullscreen whenever visibility changes
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && !document.fullscreenElement) {
+                enterFullScreen();
+            }
+        };
         
         // Monitor for fullscreen changes
         const handleFullscreenChange = () => {
-            setIsFullScreen(!!document.fullscreenElement);
+            const isInFullScreen = !!document.fullscreenElement || 
+                                   !!document.webkitFullscreenElement || 
+                                   !!document.mozFullScreenElement || 
+                                   !!document.msFullscreenElement;
+            
+            setIsFullScreen(isInFullScreen);
+            
+            // If exited fullscreen and document is visible, try to re-enter
+            if (!isInFullScreen && document.visibilityState === 'visible') {
+                enterFullScreen();
+            }
         };
         
+        // Initial fullscreen attempt
+        enterFullScreen();
+        
+        // Set up event listeners
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         
+        // Attempt to prevent keyboard shortcuts that exit fullscreen
+        const handleKeyDown = (e) => {
+            // Prevent F11, Esc, Alt+Tab combinations
+            if (e.key === 'F11' || e.key === 'Escape' || 
+                (e.altKey && e.key === 'Tab')) {
+                e.preventDefault();
+                return false;
+            }
+        };
+        
+        window.addEventListener('keydown', handleKeyDown, true);
+        
+        // Clean up
         return () => {
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
             document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('keydown', handleKeyDown, true);
         };
     }, []);
+
+    // Attempt to reenter fullscreen periodically
+    useEffect(() => {
+        // If not in fullscreen, check every 2 seconds to try to reenter
+        let intervalId;
+        
+        if (!isFullScreen) {
+            intervalId = setInterval(() => {
+                if (document.visibilityState === 'visible' && !document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.log("Couldn't automatically reenter fullscreen:", err);
+                    });
+                }
+            }, 2000);
+        }
+        
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [isFullScreen]);
 
     // Handle mouse events for resizing
     useEffect(() => {
@@ -115,6 +172,24 @@ const LiveAssignmentPage = () => {
         document.body.style.cursor = 'ns-resize';
         document.body.style.userSelect = 'none';
         e.preventDefault();
+    };
+
+    const handleEnterFullScreen = async () => {
+        try {
+            const elem = document.documentElement;
+            
+            if (elem.requestFullscreen) {
+                await elem.requestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                await elem.mozRequestFullScreen();
+            } else if (elem.webkitRequestFullscreen) {
+                await elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                await elem.msRequestFullscreen();
+            }
+        } catch (err) {
+            console.error("Error attempting to enable fullscreen:", err);
+        }
     };
 
     // Sample problem data (replace with actual API call)
@@ -181,16 +256,50 @@ const LiveAssignmentPage = () => {
         setActiveTestCase(caseId);
     };
 
+    // Track browser focus
+    useEffect(() => {
+        const handleFocus = () => {
+            // Recheck fullscreen status whenever window regains focus
+            if (!document.fullscreenElement) {
+                handleEnterFullScreen();
+            }
+        };
+        
+        window.addEventListener('focus', handleFocus);
+        
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, []);
+    
+    // Handle browser navigation attempts
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            // Prevent navigation
+            e.preventDefault();
+            // Chrome requires returnValue to be set
+            e.returnValue = '';
+            return '';
+        };
+        
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, []);
+
     return (
-        <div className="fullscreen-container">
+        <div className="fullscreen-container" ref={containerRef}>
             {!isFullScreen && (
                 <div className="fullscreen-warning">
                     <div className="warning-message">
                         <h2>Fullscreen Required</h2>
-                        <p>You must be in fullscreen mode to complete this assignment.</p>
+                        <p>You must be in fullscreen mode to complete this assignment. Please enter fullscreen mode to continue.</p>
+                        <p className="warning-detail">This is required to maintain academic integrity during the assessment.</p>
                         <button 
                             className="enter-fullscreen-btn"
-                            onClick={() => document.documentElement.requestFullscreen()}
+                            onClick={handleEnterFullScreen}
                         >
                             Enter Fullscreen
                         </button>
