@@ -101,6 +101,11 @@ const ViewAssignmentSpecific = () => {
                                 <h2 className="assignment-name">{assignment.assignment_name}</h2>
 
                                 <div className="details-section">
+                                    <h3>Start Date</h3>
+                                    <p>{assignment.start_at}</p>
+                                </div>
+
+                                <div className="details-section">
                                     <h3>Due Date</h3>
                                     <p>{assignment.due_at}</p>
                                 </div>

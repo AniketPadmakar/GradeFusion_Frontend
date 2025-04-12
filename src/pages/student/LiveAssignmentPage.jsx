@@ -1,19 +1,27 @@
 import React, { useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useParams } from "react-router-dom";
+import { getToken } from "../../data/Token";
+import hostURL from "../../data/URL";
 import "./LiveAssignmentPage.css";
 
 const LiveAssignmentPage = () => {
-  const { assignmentId } = useParams();
+  const { id } = useParams();
   const editorRef = useRef(null);
-  const [isFullScreen, setIsFullScreen] = useState(true); // Default to true to bypass warning
-  const [activeTab, setActiveTab] = useState("testcase"); // 'testcase' or 'result'
-  const [activeTestCase, setActiveTestCase] = useState(1);
-  const [horizontalSplit, setHorizontalSplit] = useState(50); // Default 50% split between problem and editor
-  const [verticalSplit, setVerticalSplit] = useState(70); // Default 70% editor, 30% testcase
-  const containerRef = useRef(null);
+  const [isFullScreen, setIsFullScreen] = useState(true);
+  const [activeTab, setActiveTab] = useState("testcase");
+  const [activeTestCase, setActiveTestCase] = useState(null);
+  const [horizontalSplit, setHorizontalSplit] = useState(50);
+  const [verticalSplit, setVerticalSplit] = useState(70);
+  const [testCases, setTestCases] = useState([]);
   const [language, setLanguage] = useState("java");
   const [isLoading, setIsLoading] = useState(false);
+  const [assignment, setAssignment] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState("");
+  const [timer, setTimer] = useState(null);
+  const containerRef = useRef(null);
   const [testResults, setTestResults] = useState({
     status: null,
     output: null,
@@ -21,7 +29,49 @@ const LiveAssignmentPage = () => {
     message: null,
     passedTests: 0,
     totalTests: 0,
+    allResults: []
   });
+
+  // Fetch assignment data when component mounts
+  useEffect(() => {
+    const fetchAssignment = async () => {
+      try {
+        const token = getToken("token");
+        if (!token) {
+          throw new Error("Authentication required");
+        }
+
+        const response = await fetch(`${hostURL.link}/app/student/assignments-student/${id}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch assignment details");
+        }
+
+        const data = await response.json();
+        setAssignment(data);
+        // Extract test cases from the question
+        const question = data.questions[0]; // We get one random question from backend
+        const testCases = question.test_cases || [];
+        setTestCases(testCases);
+        // Set the first test case as active if there are any test cases
+        if (testCases.length > 0) {
+          setActiveTestCase(testCases[0]._id);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssignment();
+  }, [id]);
 
   // Map language options to Judge0 language IDs
   const languageMap = {
@@ -220,66 +270,9 @@ const LiveAssignmentPage = () => {
     setIsFullScreen(true); // Just set to true for now
   };
 
-  // Sample problem data (replace with actual API call)
-  const problemData = {
-    title: "k largest elements",
-    marks: 4,
-    description:
-      "Given an array arr[] of positive integers and an integer k, Your task is to return k largest elements in decreasing order.",
-    examples: [
-      {
-        input: "arr[] = [12, 5, 787, 1, 23], k = 2",
-        output: "[787, 23]",
-        explanation:
-          "1st largest element in the array is 787 and second largest is 23.",
-      },
-      {
-        input: "arr[] = [1, 23, 12, 9, 30, 2, 50], k = 3",
-        output: "[50, 30, 23]",
-        explanation: "Three Largest elements in the array are 50, 30 and 23.",
-      },
-    ],
-  };
+  // Problem data is now loaded from the assignment
 
-  // Sample test cases for palindrome checker
-  const testCases = [
-    {
-      id: 1,
-      nums: "racecar",
-      target: "",
-      expectedOutput: "true\n",
-    },
-    {
-      id: 2,
-      nums: "hello",
-      target: "",
-      expectedOutput: "false\n",
-    },
-    {
-      id: 3,
-      nums: "A man a plan a canal Panama",
-      target: "",
-      expectedOutput: "true\n",
-    },
-    {
-      id: 4,
-      nums: "level",
-      target: "",
-      expectedOutput: "true\n",
-    },
-    {
-      id: 5,
-      nums: "12321",
-      target: "",
-      expectedOutput: "true\n",
-    },
-    {
-      id: 6,
-      nums: "12345",
-      target: "",
-      expectedOutput: "false\n",
-    },
-  ];
+  // Test cases are now loaded dynamically from the assignment
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
   };
@@ -325,14 +318,12 @@ const LiveAssignmentPage = () => {
     const results = data.submissions;
 
     // Calculate how many tests passed
-    let passedTests = 0;
-
-    // Store all test case results
+    let passedTests = 0;      // Store all test case results
     const allResults = results.map((result, index) => {
       // Clean up the output (remove trailing newlines, etc.)
       const cleanOutput = result.stdout ? result.stdout.trim() : "";
       // Remove the trailing newline from expected output for comparison
-      const expectedOutput = testCases[index].expectedOutput.trim();
+      const expectedOutput = testCases[index].expected_output.trim();
 
       const isSuccess =
         result.status.id === 3 && cleanOutput === expectedOutput;
@@ -341,28 +332,28 @@ const LiveAssignmentPage = () => {
       }
 
       return {
-        id: testCases[index].id,
+        id: testCases[index]._id,
         status: result.status.description,
         output: cleanOutput,
         expectedOutput: expectedOutput,
         message: result.message || result.compile_output,
         isSuccess: isSuccess,
-        input: testCases[index].nums,
+        input: testCases[index].input,
       };
     });
 
     // Set the active test case result
-    const activeResult = allResults.find((r) => r.id === activeTestCase);
+    const activeResult = allResults.find((r) => r.id === activeTestCase) || allResults[0];
 
     setTestResults({
-      status: activeResult.status,
-      output: activeResult.output,
-      expectedOutput: activeResult.expectedOutput,
-      message: activeResult.message,
-      isSuccess: activeResult.isSuccess,
+      status: activeResult ? activeResult.status : "No results",
+      output: activeResult ? activeResult.output : "",
+      expectedOutput: activeResult ? activeResult.expectedOutput : "",
+      message: activeResult ? activeResult.message : "",
+      isSuccess: activeResult ? activeResult.isSuccess : false,
       passedTests,
       totalTests: testCases.length,
-      allResults: allResults, // Store all results
+      allResults: allResults,
     });
 
     setActiveTab("result");
@@ -372,10 +363,37 @@ const LiveAssignmentPage = () => {
   const handleSubmit = async () => {
     if (editorRef.current) {
       const code = editorRef.current.getValue();
-      console.log("Submitted code:", code);
-      // You could implement additional logic for final submission
-      // For now, we'll use the same run code functionality
-      await handleRun();
+      setIsLoading(true);
+      try {
+        const token = getToken("token");
+        if (!token) {
+          throw new Error("Authentication required");
+        }
+
+        const response = await fetch(`${hostURL.link}/app/student/${id}/submit`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            responseText: code,
+            timeTaken: timeRemaining
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to submit assignment");
+        }
+
+        const data = await response.json();
+        alert("Assignment submitted successfully!");
+      } catch (error) {
+        console.error("Error submitting assignment:", error);
+        alert(error.message);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -388,9 +406,9 @@ const LiveAssignmentPage = () => {
         // Prepare submissions for all test cases
         const submissions = testCases.map((testCase) => ({
           language_id: languageMap[language],
-          source_code: code, // Send code as plain text instead of base64
-          stdin: JSON.stringify(testCase.nums) + "\n" + testCase.target, // Plain text input with newlines
-          expected_output: testCase.expectedOutput, // Plain text expected output
+          source_code: code,
+          stdin: testCase.input, // Updated to match backend structure
+          expected_output: testCase.expected_output, // Updated to match backend structure
         }));
 
         // Send to Judge0 API
@@ -483,6 +501,61 @@ const LiveAssignmentPage = () => {
     }, []);
     */
 
+  useEffect(() => {
+    if (assignment) {
+      const startTime = new Date();
+      const dueTime = new Date(assignment.due_at);
+      
+      const updateTimer = () => {
+        const now = new Date();
+        const timeDiff = dueTime - now;
+        
+        if (timeDiff <= 0) {
+          clearInterval(timer);
+          setTimeRemaining("Time's up!");
+          handleSubmit(); // Auto-submit when time is up
+          return;
+        }
+        
+        const minutes = Math.floor(timeDiff / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+        setTimeRemaining(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      };
+
+      updateTimer();
+      const intervalId = setInterval(updateTimer, 1000);
+      setTimer(intervalId);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [assignment]);
+
+  if (loading) {
+    return (
+      <div className="fullscreen-container" ref={containerRef}>
+        <div className="loading-message">Loading assignment...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fullscreen-container" ref={containerRef}>
+        <div className="error-message">{error}</div>
+      </div>
+    );
+  }
+
+  if (!assignment) {
+    return (
+      <div className="fullscreen-container" ref={containerRef}>
+        <div className="error-message">Assignment not found</div>
+      </div>
+    );
+  }
+
+  const question = assignment.questions[0]; // We get one random question from backend
+
   return (
     <div className="fullscreen-container" ref={containerRef}>
       {!isFullScreen && (
@@ -509,12 +582,12 @@ const LiveAssignmentPage = () => {
 
       <div className="assignment-header">
         <div className="assignment-title">
-          <h1>{problemData.title}</h1>
-          <span className="marks-badge">Marks: {problemData.marks}</span>
+          <h1>{assignment.assignment_name}</h1>
+          <span className="marks-badge">Marks: {assignment.marks}</span>
         </div>
         <div className="header-controls">
           <div className="timer">
-            Time Remaining: <span id="time">45:00</span>
+            Time Remaining: <span id="time">{timeRemaining}</span>
           </div>
         </div>
       </div>
@@ -526,12 +599,12 @@ const LiveAssignmentPage = () => {
         >
           <div className="problem-description">
             <h2>Problem Description</h2>
-            <p>{problemData.description}</p>
+            <p>{question.question_text}</p>
           </div>
 
           <div className="examples">
             <h2>Examples</h2>
-            {problemData.examples.map((example, index) => (
+            {question.example_input_output.map((example, index) => (
               <div key={index} className="example-box">
                 <div className="example-input">
                   <strong>Input:</strong> {example.input}
@@ -539,9 +612,11 @@ const LiveAssignmentPage = () => {
                 <div className="example-output">
                   <strong>Output:</strong> {example.output}
                 </div>
-                <div className="example-explanation">
-                  <strong>Explanation:</strong> {example.explanation}
-                </div>
+                {example.explanation && (
+                  <div className="example-explanation">
+                    <strong>Explanation:</strong> {example.explanation}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -633,38 +708,31 @@ const LiveAssignmentPage = () => {
             {activeTab === "testcase" && (
               <div className="testcase-content">
                 <div className="testcase-selector">
-                  {testCases.map((testCase) => (
+                  {testCases.map((testCase, index) => (
                     <button
-                      key={testCase.id}
+                      key={testCase._id}
                       className={`case-button ${
-                        activeTestCase === testCase.id ? "active" : ""
+                        activeTestCase === testCase._id ? "active" : ""
                       }`}
-                      onClick={() => handleTestCaseChange(testCase.id)}
+                      onClick={() => handleTestCaseChange(testCase._id)}
                     >
-                      Case {testCase.id}
+                      Case {index + 1}
                     </button>
                   ))}
-                  <button className="add-case-button">+</button>
                 </div>
                 <div className="testcase-details">
-                  {testCases.find((tc) => tc.id === activeTestCase) && (
+                  {testCases.find((tc) => tc._id === activeTestCase) && (
                     <>
                       <div className="testcase-input">
-                        <label>nums =</label>
+                        <label>Input:</label>
                         <div className="input-field">
-                          {JSON.stringify(
-                            testCases.find((tc) => tc.id === activeTestCase)
-                              .nums
-                          )}
+                          {testCases.find((tc) => tc._id === activeTestCase).input}
                         </div>
                       </div>
                       <div className="testcase-input">
-                        <label>target =</label>
+                        <label>Expected Output:</label>
                         <div className="input-field">
-                          {
-                            testCases.find((tc) => tc.id === activeTestCase)
-                              .target
-                          }
+                          {testCases.find((tc) => tc._id === activeTestCase).expected_output}
                         </div>
                       </div>
                     </>
@@ -682,23 +750,21 @@ const LiveAssignmentPage = () => {
                 ) : testResults.status ? (
                   <>
                     <div className="test-summary">
-                      <p
-                        className={`result-status ${
-                          testResults.isSuccess ? "success" : "error"
+                      <p className={`result-status ${
+                          testResults.passedTests === testResults.totalTests ? "success" : "error"
                         }`}
                       >
-                        {testResults.status}
+                        {testResults.passedTests === testResults.totalTests ? "All Tests Passed!" : "Some Tests Failed"}
                       </p>
                       <p className="test-count">
-                        Passed {testResults.passedTests} of{" "}
-                        {testResults.totalTests} test cases
+                        Passed {testResults.passedTests} of {testResults.totalTests} test cases
                       </p>
                     </div>
 
                     {/* Show active test case details */}
                     <div className="result-details">
                       <div className="result-header">
-                        <h3>Test Case {activeTestCase} Details</h3>
+                        <h3>Test Case {testCases.findIndex(tc => tc._id === activeTestCase) + 1} Details</h3>
                       </div>
                       <div className="result-row">
                         <span>Input:</span>
@@ -738,7 +804,7 @@ const LiveAssignmentPage = () => {
                               onClick={() => setActiveTestCase(result.id)}
                             >
                               <div className="test-card-header">
-                                <span>Test Case {result.id}</span>
+                                <span>Test Case {testCases.findIndex(tc => tc._id === result.id) + 1}</span>
                                 <span
                                   className={`status-indicator ${
                                     result.isSuccess ? "success" : "failure"

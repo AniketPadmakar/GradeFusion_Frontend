@@ -13,6 +13,7 @@ const CreateAssignment = () => {
     batch: "",
     title: "",
     description: "",
+    startDate: "",
     dueDate: "",
     maxMarks: "",
     selectedQuestions: [],
@@ -127,19 +128,19 @@ const CreateAssignment = () => {
       return;
     }
 
-    // Convert the due date to a formatted string
+    // Convert the dates to formatted strings
+    const startDate = new Date(formData.startDate);
     const dueDate = new Date(formData.dueDate);
-    const formattedDueDate =
-      dueDate.toLocaleDateString("en-GB") +
-      " :: " +
-      dueDate.toLocaleTimeString("en-GB");
+    const formattedStartDate = startDate.toLocaleDateString("en-GB") + " :: " + startDate.toLocaleTimeString("en-GB");
+    const formattedDueDate = dueDate.toLocaleDateString("en-GB") + " :: " + dueDate.toLocaleTimeString("en-GB");
 
     // Transform the data to match backend expectations
     const submissionData = {
       assignment_name: formData.title,
-      questions: formData.selectedQuestions.map((q) => q.id), // Just send the IDs
+      questions: formData.selectedQuestions.map((q) => q.id),
       class_name: formData.class,
       batch: formData.batch,
+      start_at: formattedStartDate,
       due_at: formattedDueDate,
       marks: parseInt(formData.maxMarks),
     };
@@ -322,6 +323,21 @@ const CreateAssignment = () => {
           </div>
 
           <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="startDate">Start Date</label>
+              <input
+                type="datetime-local"
+                id="startDate"
+                name="startDate"
+                value={formData.startDate}
+                min={getISTDateTime()} // Restrict to future date & time in IST
+                onChange={(e) =>
+                  setFormData({ ...formData, startDate: e.target.value })
+                }
+                required
+              />
+            </div>
+
             <div className="form-group">
               <label htmlFor="dueDate">Due Date</label>
               <input

@@ -30,8 +30,8 @@ function App() {
         <Route path="/ReopenAssignment" element={<ReopenAssignment />} />
         <Route path="/StudentSubmissionView" element={<StudentSubmissionView />} />
         <Route path="/AssignmentDetails" element={<AssignmentDetails />} />
-        <Route path="/LiveAssignmentStart" element={<LiveAssignmentStart />} />
-        <Route path="/LiveAssignmentPage" element={<LiveAssignmentPage />} />
+        <Route path="/LiveAssignmentStart/:id" element={<LiveAssignmentStart />} />
+        <Route path="/LiveAssignmentPage/:id" element={<LiveAssignmentPage />} />
         <Route path="/ViewQuestions" element={<ViewQuestions />} />
         <Route path="/view-question/:id" element={<ViewQuestionspecific />} />
         <Route path="/CreateQuestion" element={<CreateQuestion />} />
