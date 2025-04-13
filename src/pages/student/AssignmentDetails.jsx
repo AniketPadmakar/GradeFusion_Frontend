@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { dateUtils } from '../../utils/dateUtils';
 import './AssignmentDetails.css';
 
 const AssignmentDetails = () => {
@@ -91,7 +92,7 @@ const AssignmentDetails = () => {
                         <h2>Assignment Details</h2>
                         <div className="timeline-item">
                             <span className="timeline-label">Due Date:</span>
-                            <span className="timeline-value">{new Date(assignment.dueDate).toLocaleDateString()}</span>
+                            <span className="timeline-value">{dateUtils.formatForDisplay(assignment.dueDate)}</span>
                         </div>
                         <div className="timeline-item">
                             <span className="timeline-label">Total Marks:</span>

@@ -1,6 +1,6 @@
-// StudentSubmissionView.jsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { dateUtils } from '../../utils/dateUtils';
 import './StudentSubmissionView.css';
 import { useNavigate } from "react-router-dom";
 import { getToken,deleteToken } from "../../data/Token";
@@ -244,7 +244,7 @@ const StudentSubmissionView = () => {
                     <p><strong>Student ID:</strong> {submission.studentId}</p>
                     <p><strong>Class:</strong> {submission.class}</p>
                     <p><strong>Batch:</strong> {submission.batch}</p>
-                    <p><strong>Submitted:</strong> {new Date(submission.submissionDate).toLocaleString()}</p>
+                    <p><strong>Submitted:</strong> {dateUtils.formatForDisplay(submission.submissionDate)}</p>
                     <p><strong>Auto Grade:</strong> {submission.autoGrade}/100</p>
                   </div>
                 </div>

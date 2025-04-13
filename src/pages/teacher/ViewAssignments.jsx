@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { getToken,deleteToken } from "../../data/Token";
 import hostURL from "../../data/URL";
+import { dateUtils } from '../../utils/dateUtils';
 import './ViewAssignments.css';
 
 const ViewAssignments = () => {
@@ -71,30 +72,7 @@ const ViewAssignments = () => {
     }, []);
 
     const formatDate = (dateString) => {
-        if (!dateString) return "Not Set";
-        
-        // Try to parse as a standard JavaScript date first
-        let date = new Date(dateString);
-        
-        // If it's not a valid date, try the DD/MM/YYYY :: HH:mm:ss format
-        if (date.toString() === "Invalid Date") {
-            const parts = dateString.split(" :: ");
-            if (parts.length === 2) {
-                const [datePart, timePart] = parts;
-                const [day, month, year] = datePart.split("/");
-                date = new Date(`${year}-${month}-${day}T${timePart}`);
-            }
-        }
-
-        if (date.toString() === "Invalid Date") {
-            return "Invalid Date";
-        }
-
-        // Format the date consistently
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = date.getHours().toString().padStart(2, '0');
+        return dateString ? dateUtils.formatForDisplay(dateString) : "Not Set";
         const minutes = date.getMinutes().toString().padStart(2, '0');
         const seconds = date.getSeconds().toString().padStart(2, '0');
 
@@ -172,9 +150,9 @@ const ViewAssignments = () => {
                                     <h2>{assignment.assignment_name}</h2>
                                 </div>
                                 <div className="assignment-details">
-                                    <span className="date">Created: {formatDate(assignment.created_at)}</span>
-                                    <span className="start-date">Starts: {formatDate(assignment.start_at)}</span>
-                                    <span className="due-date">Due: {formatDate(assignment.due_at)}</span>
+                                    <span className="date">Created: {dateUtils.formatForDisplay(assignment.created_at)}</span>
+                                    <span className="start-date">Starts: {dateUtils.formatForDisplay(assignment.start_at)}</span>
+                                    <span className="due-date">Due: {dateUtils.formatForDisplay(assignment.due_at)}</span>
                                     <span className="marks">Marks: {assignment.marks}</span>
                                     <span className="students">Students Enrolled: {assignment.student_ids.length}</span>
                                 </div>

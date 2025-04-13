@@ -1,45 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getToken } from "../../data/Token";
+import { dateUtils } from '../../utils/dateUtils';
 import hostURL from "../../data/URL";
 import './EditAssignment.css';
 
-// Utility function to convert backend date format to input datetime-local format
-const convertToInputDateTime = (backendDate) => {
-    try {
-        if (!backendDate) return '';
-        
-        // Handle if the date is already in ISO format
-        if (backendDate.includes('T')) {
-            const date = new Date(backendDate);
-            if (!isNaN(date.getTime())) {
-                return backendDate.slice(0, 16); // Get YYYY-MM-DDTHH:mm format
-            }
-        }
-
-        const [datePart, timePart] = backendDate.split(' :: ');
-        if (!datePart || !timePart) return '';
-
-        const [day, month, year] = datePart.split('/');
-        if (!day || !month || !year) return '';
-
-        // Ensure all parts are padded correctly
-        const paddedMonth = String(month).padStart(2, '0');
-        const paddedDay = String(day).padStart(2, '0');
-        
-        return `${year}-${paddedMonth}-${paddedDay}T${timePart}`;
-    } catch (error) {
-        console.error('Error converting date:', error);
-        return '';
-    }
-};
-
-// Utility function to convert input datetime-local format to backend format
-const convertToBackendDateTime = (inputDate) => {
-    if (!inputDate) return '';
-    const date = new Date(inputDate);
-    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} :: ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
-};
+// Use dateUtils for date conversions
 
 const EditAssignment = () => {
     const { id } = useParams();
@@ -99,8 +65,8 @@ const EditAssignment = () => {
                     marks: assignmentData.marks || '',
                     description: assignmentData.description || '',
                     requirements: assignmentData.requirements || '',
-                    start_at: convertToInputDateTime(assignmentData.start_at),
-                    due_at: convertToInputDateTime(assignmentData.due_at)
+                    start_at: dateUtils.toInputFormat(assignmentData.start_at),
+                    due_at: dateUtils.toInputFormat(assignmentData.due_at)
                 };
                 
                 // Additional debug log for class and batch
@@ -133,8 +99,8 @@ const EditAssignment = () => {
             // Convert dates back to backend format before sending
             const submissionData = {
                 ...assignment,
-                start_at: convertToBackendDateTime(assignment.start_at),
-                due_at: convertToBackendDateTime(assignment.due_at)
+                start_at: dateUtils.convertToBackendDateTime(assignment.start_at),
+                due_at: dateUtils.convertToBackendDateTime(assignment.due_at)
             };
 
             const response = await fetch(`${hostURL.link}/app/teacher/update-assignments/${id}`, {

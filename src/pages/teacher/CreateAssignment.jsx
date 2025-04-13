@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { getToken,deleteToken } from "../../data/Token";
 import hostURL from "../../data/URL";
+import { dateUtils } from "../../utils/dateUtils";
 import "./CreateAssignment.css";
 
 const CreateAssignment = () => {
@@ -32,11 +33,7 @@ const CreateAssignment = () => {
 
 
   const getISTDateTime = () => {
-    let now = new Date();
-    let istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
-    let istTime = new Date(now.getTime() + istOffset);
-    
-    return istTime.toISOString().slice(0, 16); // Returns yyyy-MM-ddTHH:mm
+    return dateUtils.toInputFormat(dateUtils.getCurrentDate());
   };
 
    
@@ -128,11 +125,14 @@ const CreateAssignment = () => {
       return;
     }
 
-    // Convert the dates to formatted strings
-    const startDate = new Date(formData.startDate);
-    const dueDate = new Date(formData.dueDate);
-    const formattedStartDate = startDate.toLocaleDateString("en-GB") + " :: " + startDate.toLocaleTimeString("en-GB");
-    const formattedDueDate = dueDate.toLocaleDateString("en-GB") + " :: " + dueDate.toLocaleTimeString("en-GB");
+    // Convert and validate the dates using our standard format
+    const standardizedStartDate = dateUtils.formatToStandard(formData.startDate);
+    const standardizedDueDate = dateUtils.formatToStandard(formData.dueDate);
+
+    if (!dateUtils.isValidDate(standardizedStartDate) || !dateUtils.isValidDate(standardizedDueDate)) {
+      alert("Invalid date format. Please check the dates.");
+      return;
+    }
 
     // Transform the data to match backend expectations
     const submissionData = {
@@ -140,8 +140,8 @@ const CreateAssignment = () => {
       questions: formData.selectedQuestions.map((q) => q.id),
       class_name: formData.class,
       batch: formData.batch,
-      start_at: formattedStartDate,
-      due_at: formattedDueDate,
+      start_at: standardizedStartDate,
+      due_at: standardizedDueDate,
       marks: parseInt(formData.maxMarks),
     };
 

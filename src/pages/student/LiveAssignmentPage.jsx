@@ -20,7 +20,9 @@ const LiveAssignmentPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState("");
+  const [timeTaken, setTimeTaken] = useState(0);
   const [timer, setTimer] = useState(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const containerRef = useRef(null);
   const [testResults, setTestResults] = useState({
     status: null,
@@ -48,12 +50,26 @@ const LiveAssignmentPage = () => {
             "Content-Type": "application/json",
           },
         });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch assignment details");
+        
+        const data = await response.json();
+        
+        if (data.isSubmitted) {
+          setError("You have already submitted this assignment");
+          setTimeout(() => {
+            window.location.href = '/StudentDash';
+          }, 2000);
+          return;
         }
 
-        const data = await response.json();
+        if (!response.ok) {
+          if (response.status === 403) {
+            const data = await response.json();
+            alert(data.message);
+            window.location.href = '/StudentDash';
+            return;
+          }
+          throw new Error("Failed to fetch assignment details");
+        }
         setAssignment(data);
         // Extract test cases from the question
         const question = data.questions[0]; // We get one random question from backend
@@ -361,10 +377,44 @@ const LiveAssignmentPage = () => {
   };
 
   const handleSubmit = async () => {
-    if (editorRef.current) {
-      const code = editorRef.current.getValue();
+    if (!isSubmitted) {
+      const code = editorRef.current ? editorRef.current.getValue() : "// No code submitted";
       setIsLoading(true);
       try {
+        // First run the code if it hasn't been run yet or if code changed since last run
+        if (!testResults.status || testResults.lastRanCode !== code) {
+          // Prepare submissions for all test cases
+          const submissions = testCases.map((testCase) => ({
+            language_id: languageMap[language],
+            source_code: code,
+            stdin: testCase.input,
+            expected_output: testCase.expected_output,
+          }));
+
+          // Send to Judge0 API
+          const judgeResponse = await fetch(
+            "https://judge0-ce.p.rapidapi.com/submissions/batch",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
+                "X-RapidAPI-Key":
+                  "87114658f6msh1cc13fef2b1a2dfp14a88djsn8810d5742a87",
+              },
+              body: JSON.stringify({ submissions }),
+            }
+          );
+
+          if (!judgeResponse.ok) {
+            throw new Error("Failed to run code");
+          }
+
+          const judgeData = await judgeResponse.json();
+          const results = await pollForResults(judgeData);
+          processResults(results, testCases);
+        }
+
         const token = getToken("token");
         if (!token) {
           throw new Error("Authentication required");
@@ -378,7 +428,12 @@ const LiveAssignmentPage = () => {
           },
           body: JSON.stringify({
             responseText: code,
-            timeTaken: timeRemaining
+            timeTaken: Math.max(1, timeTaken || 0), // Ensure we always send a positive number
+            testResults: {
+              passedTests: testResults.passedTests,
+              totalTests: testResults.totalTests,
+              allResults: testResults.allResults
+            }
           }),
         });
 
@@ -387,7 +442,21 @@ const LiveAssignmentPage = () => {
         }
 
         const data = await response.json();
-        alert("Assignment submitted successfully!");
+        setIsSubmitted(true);
+        alert("Assignment submitted successfully! Redirecting to dashboard...");
+        
+        // Update backend to mark as submitted and redirect
+        await fetch(`${hostURL.link}/app/student/mark-submitted/${id}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          }
+        });
+
+        setTimeout(() => {
+          window.location.href = '/StudentDash';
+        }, 1500);
       } catch (error) {
         console.error("Error submitting assignment:", error);
         alert(error.message);
@@ -504,22 +573,28 @@ const LiveAssignmentPage = () => {
   useEffect(() => {
     if (assignment) {
       const startTime = new Date();
-      const dueTime = new Date(assignment.due_at);
+      const dueTime = dateUtils.parseFromStandard(assignment.due_at);
       
       const updateTimer = () => {
-        const now = new Date();
-        const timeDiff = dueTime - now;
+        const now = moment().tz(dateUtils.TIMEZONE);
+        const timeDiff = moment(dueTime).diff(now);
+        const timeSpent = Math.floor(moment.duration(now.diff(startTime)).asSeconds()); // Time taken in seconds
         
         if (timeDiff <= 0) {
           clearInterval(timer);
           setTimeRemaining("Time's up!");
-          handleSubmit(); // Auto-submit when time is up
+          // Auto-submit only if not already submitted
+          if (editorRef.current && !isLoading) {
+            alert("Time's up! Your assignment will be auto-submitted.");
+            handleSubmit(); // Auto-submit when time is up
+          }
           return;
         }
         
         const minutes = Math.floor(timeDiff / (1000 * 60));
         const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
         setTimeRemaining(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+        setTimeTaken(timeSpent); // Update time taken in seconds
       };
 
       updateTimer();
@@ -645,14 +720,14 @@ const LiveAssignmentPage = () => {
             <button
               className={`run-btn ${isLoading ? "loading" : ""}`}
               onClick={handleRun}
-              disabled={isLoading}
+              disabled={isLoading || isSubmitted}
             >
               {isLoading ? "Running..." : "Run Code"}
             </button>
             <button
               className={`submit-btn ${isLoading ? "loading" : ""}`}
               onClick={handleSubmit}
-              disabled={isLoading}
+              disabled={isLoading || isSubmitted}
             >
               {isLoading ? "Submitting..." : "Submit"}
             </button>
@@ -673,6 +748,7 @@ const LiveAssignmentPage = () => {
                 fontSize: 14,
                 lineNumbers: "on",
                 automaticLayout: true,
+                readOnly: isSubmitted // Make editor read-only after submission
               }}
             />
           </div>

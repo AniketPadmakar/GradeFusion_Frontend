@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getToken } from "../../data/Token";
+import { dateUtils } from '../../utils/dateUtils';
 import hostURL from "../../data/URL";
 import './LiveAssignmentStart.css';
 
@@ -34,25 +35,20 @@ const LiveAssignmentStart = () => {
 
                 const data = await response.json();
                 
-                // Convert date format
-                const formatDate = (dateString) => {
-                    const date = new Date(dateString);
-                    if (isNaN(date.getTime())) return dateString; // Return original if invalid
-                    
-                    const day = date.getDate().toString().padStart(2, '0');
-                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                    const year = date.getFullYear();
-                    const hours = date.getHours().toString().padStart(2, '0');
-                    const minutes = date.getMinutes().toString().padStart(2, '0');
-                    const seconds = date.getSeconds().toString().padStart(2, '0');
-                    
-                    return `${day}/${month}/${year} :: ${hours}:${minutes}:${seconds}`;
-                };
+                if (data.isSubmitted) {
+                    setError("You have already submitted this assignment");
+                    setTimeout(() => {
+                        navigate('/StudentDash');
+                    }, 2000);
+                    return;
+                }
 
+                // The dates are already in the correct format (DD/MM/YYYY :: HH:mm:ss)
+                // We can use them directly with formatForDisplay
                 setAssignmentData({
                     ...data,
-                    due_at: formatDate(data.due_at),
-                    start_at: data.start_at || formatDate(new Date().toISOString()),
+                    due_at: dateUtils.formatForDisplay(data.due_at),
+                    start_at: dateUtils.formatForDisplay(data.start_at || dateUtils.getCurrentDate()),
                     instructions: [
                         "Read all questions carefully before starting",
                         "You cannot pause the test once started",
@@ -87,28 +83,8 @@ const LiveAssignmentStart = () => {
         if (!dateString) {
             return 'Date not available';
         }
-        try {
-            // Split the date string (format: "DD/MM/YYYY :: HH:mm:ss")
-            const [datePart, timePart] = dateString.split(" :: ");
-            const [day, month, year] = datePart.split("/");
-            const date = new Date(`${year}-${month}-${day}T${timePart}`);
-            
-            if (isNaN(date.getTime())) {
-                return 'Invalid date format';
-            }
-            
-            return date.toLocaleString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (error) {
-            console.error('Error formatting date:', error);
-            return 'Invalid date format';
-        }
+        // The date is already in the correct format, just pass it directly
+        return dateUtils.formatForDisplay(dateString);
     };
 
     const checkAssignmentAvailability = () => {
@@ -126,10 +102,9 @@ const LiveAssignmentStart = () => {
     };
 
     const parseDateTime = (dateString) => {
-        const [datePart, timePart] = dateString.split(" :: ");
-        const [day, month, year] = datePart.split("/");
-        return new Date(`${year}-${month}-${day}T${timePart}`);
+        return new Date(dateString); // Use native Date parsing
     };
+    
 
     if (loading) {
         return <div className="loading">Loading assignment details...</div>;
