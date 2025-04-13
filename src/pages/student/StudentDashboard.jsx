@@ -12,6 +12,14 @@ const StudentDash = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const getExpiredAssignmentsCount = () => {
+        const now = new Date();
+        return assignments.filter(assignment => {
+            const dueDate = dateUtils.parseFromStandard(assignment.due_at);
+            return !assignment.isSubmitted && dueDate < now;
+        }).length;
+    };
+
      // Add this function to handle logout
      const handleLogout = () => {
         // Delete the token from cookies
@@ -92,7 +100,14 @@ const StudentDash = () => {
                             <h2>Your Assignments</h2>
                             <span className="assignment-count">
                                 {activeTab === 'active' 
-                                    ? `${assignments.filter(a => !a.isSubmitted).length} Active`
+                                    ? `${assignments.filter(a => {
+                                        const now = new Date();
+                                        const dueDate = dateUtils.parseFromStandard(a.due_at);
+                                        const startDate = dateUtils.parseFromStandard(a.start_at);
+                                        return !a.isSubmitted && dueDate > now && startDate <= now;
+                                    }).length} Active`
+                                    : activeTab === 'expired'
+                                    ? `${getExpiredAssignmentsCount()} Expired`
                                     : `${assignments.filter(a => a.isSubmitted).length} Submitted`
                                 }
                             </span>
@@ -110,6 +125,12 @@ const StudentDash = () => {
                             >
                                 Submission History
                             </button>
+                            <button 
+                                className={`tab-button ${activeTab === 'expired' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('expired')}
+                            >
+                                Expired ({getExpiredAssignmentsCount()})
+                            </button>
                         </div>
                     </div>
 
@@ -119,31 +140,71 @@ const StudentDash = () => {
                         <p className="error-message">{error}</p>
                     ) : assignments.length === 0 ? (
                         <p className="no-assignments">No assignments found.</p>
-                    ) : assignments.filter(assignment => 
-                          activeTab === 'active' ? !assignment.isSubmitted : assignment.isSubmitted
-                        ).length === 0 ? (
+                    ) : assignments.filter(assignment => {
+                        const now = new Date();
+                        const dueDate = dateUtils.parseFromStandard(assignment.due_at);
+                        const startDate = dateUtils.parseFromStandard(assignment.start_at);
+                        const isExpired = dueDate < now;
+                        const hasStarted = startDate <= now;
+                        
+                        switch(activeTab) {
+                            case 'active':
+                                return !assignment.isSubmitted && !isExpired && hasStarted;
+                            case 'expired':
+                                return !assignment.isSubmitted && isExpired;
+                            case 'submitted':
+                                return assignment.isSubmitted;
+                            default:
+                                return false;
+                        }
+                    }).length === 0 ? (
                         <p className="no-assignments">
                             {activeTab === 'active' 
                                 ? "No active assignments at the moment."
+                                : activeTab === 'expired'
+                                ? "No expired assignments."
                                 : "No submitted assignments yet."
                             }
                         </p>
                     ) : (
                         <div className="assignments-list">
                             {assignments
-                                .filter(assignment => 
-                                    activeTab === 'active' ? !assignment.isSubmitted : assignment.isSubmitted
-                                )
-                                .map((assignment) => (
-                                <div key={assignment._id} className="assignment-card">
-                                    <div className="assignment-header">
-                                        <h3>{assignment.assignment_name}</h3>
-                                        {assignment.isSubmitted ? (
-                                            <span className="submitted-badge">Completed</span>
-                                        ) : (
-                                            <span className="active-badge">Active</span>
-                                        )}
-                                    </div>
+                                .filter(assignment => {
+                                    const now = new Date();
+                                    const dueDate = dateUtils.parseFromStandard(assignment.due_at);
+                                    const startDate = dateUtils.parseFromStandard(assignment.start_at);
+                                    const isExpired = dueDate < now;
+                                    const hasStarted = startDate <= now;
+                                    
+                                    if (activeTab === 'active') {
+                                        return !assignment.isSubmitted && !isExpired && hasStarted;
+                                    } else if (activeTab === 'expired') {
+                                        return !assignment.isSubmitted && isExpired;
+                                    } else {
+                                        return assignment.isSubmitted;
+                                    }
+                                })
+                                .map((assignment) => {
+                                    const now = new Date();
+                                    const dueDate = dateUtils.parseFromStandard(assignment.due_at);
+                                    const startDate = dateUtils.parseFromStandard(assignment.start_at);
+                                    const isExpired = dueDate < now;
+                                    const hasStarted = startDate <= now;
+                                    const isActive = hasStarted && !isExpired;
+                                    return (
+                                    <div key={assignment._id} className="assignment-card">
+                                        <div className="assignment-header">
+                                            <h3>{assignment.assignment_name}</h3>
+                                            {assignment.isSubmitted ? (
+                                                <span className="submitted-badge">Completed</span>
+                                            ) : isExpired ? (
+                                                <span className="expired-badge" style={{ backgroundColor: '#ff4444' }}>Expired</span>
+                                            ) : !hasStarted ? (
+                                                <span className="not-started-badge" style={{ backgroundColor: '#808080' }}>Not Started</span>
+                                            ) : (
+                                                <span className="active-badge">Active</span>
+                                            )}
+                                        </div>
                                     
                                     <div className="assignment-details">
                                         {assignment.course_id && (
@@ -172,6 +233,26 @@ const StudentDash = () => {
                                                 Submission Complete ✓
                                             </button>
                                         </div>
+                                    ) : isExpired ? (
+                                        <div className="expired-info">
+                                            <div className="expiry-date">
+                                                <span className="label">Expired on:</span>
+                                                <span>{dateUtils.formatForDisplay(assignment.due_at)}</span>
+                                            </div>
+                                            <div className="expiry-action">
+                                                <div className="missed-marks">
+                                                    <span className="label">Missed Marks:</span>
+                                                    <span>{assignment.marks}</span>
+                                                </div>
+                                                <button 
+                                                    className="view-details" 
+                                                    disabled
+                                                    style={{ backgroundColor: '#ff4444', cursor: 'not-allowed' }}
+                                                >
+                                                    Assignment Expired
+                                                </button>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <button 
                                             className="view-details" 
@@ -181,7 +262,8 @@ const StudentDash = () => {
                                         </button>
                                     )}
                                 </div>
-                            ))}
+                            );
+                        })}
                         </div>
                     )}
                 </div>
