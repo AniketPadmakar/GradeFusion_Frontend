@@ -1,10 +1,10 @@
-// src/utils/dateUtils.js
 import moment from 'moment-timezone';
 
 export const STANDARD_DATE_FORMAT = 'DD/MM/YYYY :: HH:mm:ss';
 export const TIMEZONE = 'Asia/Kolkata';
 
-export const dateUtils = {
+// Create the object
+const dateUtils = {
     formatToStandard: (date) => {
         if (!date) return '';
         let momentDate = moment(date);
@@ -70,3 +70,7 @@ export const dateUtils = {
         return moment(dateString, STANDARD_DATE_FORMAT, true).isValid();
     }
 };
+
+// Export as both named and default export
+export { dateUtils };  // Named export for backwards compatibility
+export default dateUtils;  // Default export for new code

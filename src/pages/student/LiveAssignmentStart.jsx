@@ -126,8 +126,6 @@ const LiveAssignmentStart = () => {
                 </div>
                 <div className="header-details">
                     <div className="detail-item">
-                        <span className="detail-label">Assigned by:</span>
-                        <span className="detail-value">{assignmentData.teacher_id?.firstName} {assignmentData.teacher_id?.lastName}</span>
                     </div>
                     <div className="detail-item">
                         <span className="detail-label">Start Date:</span>

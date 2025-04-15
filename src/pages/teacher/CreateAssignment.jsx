@@ -330,6 +330,7 @@ const CreateAssignment = () => {
                 id="startDate"
                 name="startDate"
                 value={formData.startDate}
+                step="1" // <-- Add this line to allow seconds precision
                 min={getISTDateTime()} // Restrict to future date & time in IST
                 onChange={(e) =>
                   setFormData({ ...formData, startDate: e.target.value })
@@ -345,6 +346,7 @@ const CreateAssignment = () => {
                 id="dueDate"
                 name="dueDate"
                 value={formData.dueDate}
+                 step="1"
                 min={getISTDateTime()} // Restrict to future date & time in IST
                 onChange={(e) =>
                   setFormData({ ...formData, dueDate: e.target.value })

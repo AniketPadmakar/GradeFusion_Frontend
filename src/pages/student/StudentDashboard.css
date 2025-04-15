@@ -12,26 +12,26 @@
 
 /* Assignment header styles */
 .header-with-count {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .header-with-count h2 {
-    margin: 0;
+  margin: 0;
 }
 
 .assignment-count {
-    background: #f1f5f9;
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    color: #64748b;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    height: 24px;
+  background: #f1f5f9;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
 }
 
 .nav-content {
@@ -117,28 +117,32 @@
   color: white;
 }
 
-/* Dashboard styles */
+/* Dashboard styles - aligned with navbar */
 .dashboard-container {
+  max-width: 1200px; /* Same max-width as nav-content */
+  margin: 0 auto; /* Center the container */
   padding: 2rem;
-  max-width: 1200px;
-  margin: 80px auto 0;
   animation: fadeIn 0.5s ease-in;
   background: #f8f9fa;
   min-height: calc(100vh - 80px);
+  padding-top: 100px; /* Space for navbar */
 }
 
 .welcome-section {
+  width: 100%;
   margin-bottom: 3rem;
   animation: slideDown 0.5s ease-out;
   background: white;
   border-radius: 20px;
   padding: 2rem;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  text-align: center;
 }
 
 .welcome-content {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1.5rem;
 }
 
@@ -174,6 +178,7 @@
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 2rem;
   margin-bottom: 3rem;
+  width: 100%;
 }
 
 .stat-box {
@@ -237,6 +242,7 @@
 }
 
 .assignments-section {
+  width: 100%;
   background: white;
   padding: 2rem;
   border-radius: 20px;
@@ -256,6 +262,7 @@
   color: #1a1a1a;
   font-size: 1.5rem;
   font-weight: 600;
+  text-align: left;
 }
 
 .tab-container {
@@ -292,6 +299,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
+  text-align: left;
 }
 
 .assignment-card {
@@ -403,244 +411,56 @@
 
 /* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideDown {
-  from {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes scaleIn {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 @keyframes numberAnimation {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 1;
-  }
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes glow {
-  0% {
-    box-shadow: 0 0 5px rgba(244, 63, 94, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(244, 63, 94, 0.5);
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(244, 63, 94, 0.5);
-  }
+  0% { box-shadow: 0 0 0px #e11d48; }
+  50% { box-shadow: 0 0 15px #f43f5e; }
+  100% { box-shadow: 0 0 0px #e11d48; }
 }
 
-/* Responsive Design */
-@media screen and (max-width: 768px) {
-  .nav-content {
-    padding: 1rem;
-  }
-
-  .logo {
-    font-size: 1.5rem;
-  }
-
-  .nav-links {
-    gap: 1.5rem;
-  }
-
-  .nav-link {
-    font-size: 1rem;
-  }
-
-  .signup-btn {
-    padding: 0.6rem 1.2rem;
-  }
-
-  .dashboard-container {
-    padding: 1rem;
-    margin-top: 70px;
-  }
-
-  .welcome-content {
-    flex-direction: column;
-    text-align: center;
-  }
-
+/* Media queries for responsiveness */
+@media (max-width: 768px) {
   .section-header {
     flex-direction: column;
-    align-items: stretch;
-  }
-
-  .tab-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    justify-content: flex-start;
-    padding: 0.5rem;
-  }
-
-  .tab-button {
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .nav-content {
-    padding: 0.8rem;
-  }
-
-  .logo {
-    font-size: 1.3rem;
-  }
-
-  .nav-links {
+    align-items: flex-start;
     gap: 1rem;
   }
-
-  .nav-link {
-    font-size: 0.9rem;
+  
+  .tab-container {
+    width: 100%;
+    overflow-x: auto;
+    padding: 0.5rem;
   }
-
-  .signup-btn {
-    padding: 0.5rem 1rem;
-  }
-
+  
   .dashboard-container {
-    margin-top: 60px;
+    padding: 1.5rem;
   }
-
-  .welcome-text h1 {
-    font-size: 1.5rem;
-  }
-
-  .stat-box {
-    padding: 1rem;
-  }
-
-  .stat-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
-  }
-
-  .stat-number {
-    font-size: 1.5rem;
-  }
-
+  
+  .welcome-section,
   .assignments-section {
-    padding: 1.2rem;
+    padding: 1.5rem;
   }
-
-  .assignment-card {
-    padding: 1rem;
-  }
-
-  .subject-badge,
-  .status-badge {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
-  }
-}
-
-.submitted-status {
-  text-align: center;
-  padding: 10px;
-}
-
-.submitted-badge {
-  background-color: #4caf50;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  margin-bottom: 8px;
-  display: inline-block;
-}
-
-.submitted-message {
-  color: #666;
-  font-size: 14px;
-  margin: 5px 0;
-}
-
-.expired-info {
-    margin-top: 15px;
-    border-top: 1px solid #eee;
-    padding-top: 15px;
-}
-
-.expiry-date {
-    margin-bottom: 10px;
-    color: #666;
-}
-
-.expiry-action {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.missed-marks {
-    background-color: #ffebee;
-    padding: 5px 10px;
-    border-radius: 4px;
-    color: #d32f2f;
-}
-
-.missed-marks .label {
-    font-weight: 600;
-    margin-right: 5px;
-}
-
-.expired-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    font-weight: 600;
-    color: white;
 }
