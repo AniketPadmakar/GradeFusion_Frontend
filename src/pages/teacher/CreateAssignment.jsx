@@ -13,12 +13,10 @@ const CreateAssignment = () => {
     class: "",
     batch: "",
     title: "",
-    description: "",
     startDate: "",
     dueDate: "",
     maxMarks: "",
-    selectedQuestions: [],
-    attachments: [],
+    selectedQuestions: []
   });
 
   const navigate = useNavigate();
@@ -105,14 +103,6 @@ const CreateAssignment = () => {
       selectedQuestions: checked
         ? [...prev.selectedQuestions, { id: value, title: e.target.dataset.title }]
         : prev.selectedQuestions.filter((q) => q.id !== value),
-    }));
-  };
- 
-
-  const handleFileChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      attachments: [...e.target.files],
     }));
   };
 
@@ -268,20 +258,23 @@ const CreateAssignment = () => {
 
             {availableQuestions.length > 0 && (
               <div className="questions-list">
-              {availableQuestions.map((question) => (
-                <div key={question.id} className="question-item">
-                  <input
-                    type="checkbox"
-                    id={`question-${question.id}`}
-                    value={question.id}
-                    data-title={question.title}
-                    checked={formData.selectedQuestions.some((q) => q.id === question.id)}
-                    onChange={handleQuestionSelect}
-                  />
-                  <label htmlFor={`question-${question.id}`}>{question.title}</label>
-                </div>
-              ))}
-            </div>  
+                {availableQuestions.map((question) => (
+                  <div key={question.id} className="question-item modern-checkbox">
+                    <label htmlFor={`question-${question.id}`} className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        id={`question-${question.id}`}
+                        value={question.id}
+                        data-title={question.title}
+                        checked={formData.selectedQuestions.some((q) => q.id === question.id)}
+                        onChange={handleQuestionSelect}
+                      />
+                      <span className="custom-checkbox"></span>
+                      {question.title}
+                    </label>
+                  </div>
+                ))}
+              </div>  
             )}
 
             {formData.selectedQuestions.length > 0 && (
@@ -306,19 +299,6 @@ const CreateAssignment = () => {
               onChange={handleChange}
               required
               placeholder="Enter assignment title"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="description">Description</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              placeholder="Enter assignment description"
-              rows="4"
             />
           </div>
 
@@ -367,23 +347,6 @@ const CreateAssignment = () => {
                 placeholder="Enter max marks"
                 min="0"
               />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="attachments">Attachments</label>
-            <div className="file-input-container">
-              <input
-                type="file"
-                id="attachments"
-                name="attachments"
-                onChange={handleFileChange}
-                multiple
-                className="file-input"
-              />
-              <label htmlFor="attachments" className="file-input-label">
-                Choose Files
-              </label>
             </div>
           </div>
 

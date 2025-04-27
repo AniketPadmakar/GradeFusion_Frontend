@@ -1,4 +1,4 @@
-  import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
   import Editor from "@monaco-editor/react";
   import { useParams } from "react-router-dom";
   import { getToken } from "../../data/Token";
@@ -34,6 +34,12 @@
       passedTests: 0,
       totalTests: 0,
       allResults: []
+    });
+    const [judge0RawResponse, setJudge0RawResponse] = useState(null); // Add this state
+    const [calculatedMarks, setCalculatedMarks] = useState({
+      scenario1: 0,
+      scenario2: 0,
+      scenario3: 0
     });
 
     // Fetch assignment data when component mounts
@@ -336,16 +342,17 @@
     const processResults = (data, testCases) => {
       const results = data.submissions;
 
+      // Calculate marks for all scenarios
+      const marks = calculateMarks(results);
+      setCalculatedMarks(marks);
+
       // Calculate how many tests passed
-      let passedTests = 0;      // Store all test case results
+      let passedTests = 0;
       const allResults = results.map((result, index) => {
-        // Clean up the output (remove trailing newlines, etc.)
         const cleanOutput = result.stdout ? result.stdout.trim() : "";
-        // Remove the trailing newline from expected output for comparison
         const expectedOutput = testCases[index].expected_output.trim();
 
-        const isSuccess =
-          result.status.id === 3 && cleanOutput === expectedOutput;
+        const isSuccess = result.status.id === 3 && cleanOutput === expectedOutput;
         if (isSuccess) {
           passedTests++;
         }
@@ -358,6 +365,8 @@
           message: result.message || result.compile_output,
           isSuccess: isSuccess,
           input: testCases[index].input,
+          time: result.time,
+          memory: result.memory
         };
       });
 
@@ -379,6 +388,88 @@
       setIsLoading(false);
     };
 
+    const calculateMarks = (submissions) => {
+      const totalTests = submissions.length;
+      const passedTests = submissions.filter(sub => sub.status.id === 3);
+
+      // Scenario 1: Simple 2 marks per pass
+      const scenario1 = (() => {
+        const totalPossibleMarks = totalTests * 2;
+        const obtainedMarks = passedTests.length * 2;
+        return ((obtainedMarks / totalPossibleMarks) * 10).toFixed(2);
+      })();
+
+      // Scenario 2: Weighted based on difficulty
+      const scenario2 = (() => {
+        const easyCount = Math.floor(totalTests * 0.3);
+        const mediumCount = Math.floor(totalTests * 0.4);
+        const hardCount = totalTests - easyCount - mediumCount;
+
+        const marksArray = [];
+        for (let i = 0; i < totalTests; i++) {
+          if (i < easyCount) marksArray.push(1);
+          else if (i < easyCount + mediumCount) marksArray.push(1.5);
+          else marksArray.push(2.5);
+        }
+
+        let obtainedMarks = 0;
+        let totalPossibleMarks = 0;
+        for (let i = 0; i < totalTests; i++) {
+          totalPossibleMarks += marksArray[i];
+          if (submissions[i].status.id === 3) {
+            obtainedMarks += marksArray[i];
+          }
+        }
+
+        return ((obtainedMarks / totalPossibleMarks) * 10).toFixed(2);
+      })();
+
+      // Scenario 3: Weighted + Time/Memory penalties
+      const scenario3 = (() => {
+        const easyCount = Math.floor(totalTests * 0.3);
+        const mediumCount = Math.floor(totalTests * 0.4);
+        const hardCount = totalTests - easyCount - mediumCount;
+
+        const marksArray = [];
+        for (let i = 0; i < totalTests; i++) {
+          if (i < easyCount) marksArray.push(1);
+          else if (i < easyCount + mediumCount) marksArray.push(1.5);
+          else marksArray.push(2.5);
+        }
+
+        const timeThreshold = 0.08; // seconds
+        const memoryThreshold = 20480; // KB
+
+        let obtainedMarks = 0;
+        let totalPossibleMarks = 0;
+        for (let i = 0; i < totalTests; i++) {
+          totalPossibleMarks += marksArray[i];
+
+          if (submissions[i].status.id === 3) {
+            let marks = marksArray[i];
+
+            if (submissions[i].time > timeThreshold) {
+              marks -= 0.2;
+            }
+            if (submissions[i].memory > memoryThreshold) {
+              marks -= 0.2;
+            }
+
+            if (marks < 0) marks = 0;
+            obtainedMarks += marks;
+          }
+        }
+
+        return ((obtainedMarks / totalPossibleMarks) * 10).toFixed(2);
+      })();
+
+      return {
+        scenario1,
+        scenario2,
+        scenario3
+      };
+    };
+
     const handleSubmit = async () => {
       if (!isSubmitted) {
         const code = editorRef.current ? editorRef.current.getValue() : "// No code submitted";
@@ -386,7 +477,6 @@
         try {
           // First run the code if it hasn't been run yet or if code changed since last run
           if (!testResults.status || testResults.lastRanCode !== code) {
-            // Prepare submissions for all test cases
             const submissions = testCases.map((testCase) => ({
               language_id: languageMap[language],
               source_code: code,
@@ -394,7 +484,6 @@
               expected_output: testCase.expected_output,
             }));
 
-            // Send to Judge0 API
             const judgeResponse = await fetch(
               "https://judge0-ce.p.rapidapi.com/submissions/batch",
               {
@@ -415,6 +504,7 @@
 
             const judgeData = await judgeResponse.json();
             const results = await pollForResults(judgeData);
+            setJudge0RawResponse(results);
             processResults(results, testCases);
           }
 
@@ -431,12 +521,17 @@
             },
             body: JSON.stringify({
               responseText: code,
-              timeTaken: Math.max(1, timeTaken || 0), // Ensure we always send a positive number
+              timeTaken: Math.max(1, timeTaken || 0),
               testResults: {
                 passedTests: testResults.passedTests,
                 totalTests: testResults.totalTests,
-                allResults: testResults.allResults
-              }
+                allResults: testResults.allResults.map(result => ({
+                  ...result,
+                  isSuccess: result.status === "Accepted" && result.output === result.expectedOutput
+                }))
+              },
+              judge0RawResponse: judge0RawResponse,
+              calculatedMarks: calculatedMarks // Include all scenarios' marks
             }),
           });
 
@@ -444,11 +539,44 @@
             throw new Error("Failed to submit assignment");
           }
 
+          // --- Get Judge0 batch result using tokens and send to /resultCalculation ---
+          let tokens = [];
+          if (judge0RawResponse && judge0RawResponse.submissions) {
+            tokens = judge0RawResponse.submissions.map(sub => sub.token);
+          }
+          if (tokens.length > 0) {
+            const tokensParam = tokens.join(",");
+            const judge0GetResponse = await fetch(
+              `https://judge0-ce.p.rapidapi.com/submissions/batch?tokens=${tokensParam}`,
+              {
+                method: "GET",
+                headers: {
+                  "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
+                  "X-RapidAPI-Key": "87114658f6msh1cc13fef2b1a2dfp14a88djsn8810d5742a87",
+                },
+              }
+            );
+            if (judge0GetResponse.ok) {
+              const judge0ResultCalculation = await judge0GetResponse.json();
+              await fetch(`${hostURL.link}/app/student/resultCalculation/${id}`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  judge0RawResponse: judge0ResultCalculation,
+                  calculatedMarks: calculatedMarks, // Include calculated marks here too
+                  scenario: 1 // You can choose which scenario to use as default
+                }),
+              });
+            }
+          }
+
           const data = await response.json();
           setIsSubmitted(true);
-          alert("Assignment submitted successfully! Redirecting to dashboard...");
+          alert(`Assignment submitted successfully! Your marks:\nScenario 1: ${calculatedMarks.scenario1}\nScenario 2: ${calculatedMarks.scenario2}\nScenario 3: ${calculatedMarks.scenario3}\n\nRedirecting to dashboard...`);
           
-          // Update backend to mark as submitted and redirect
           await fetch(`${hostURL.link}/app/student/mark-submitted/${id}`, {
             method: "POST",
             headers: {
@@ -584,7 +712,6 @@
             const datePart = parts[0].split('/');
             const timePart = parts[1].split(':');
             
-            // Note: Months in JS Date are 0-indexed, so subtract 1 from month
             const dueDate = new Date(
               datePart[2], // year
               datePart[1] - 1, // month (0-indexed)
@@ -594,8 +721,9 @@
               timePart[2]  // second
             );
             
-            console.log("Due date parsed:", dueDate);
-            
+            console.log("Parsed Due Date:", dueDate);
+            console.log("Current Time:", new Date());
+
             const updateTimer = () => {
               const now = new Date();
               const timeDiff = dueDate.getTime() - now.getTime();
@@ -808,7 +936,8 @@
               {activeTab === "testcase" && (
                 <div className="testcase-content">
                   <div className="testcase-selector">
-                    {testCases.map((testCase, index) => (
+                    {/* Limit the display of test cases to the first two */}
+                    {testCases.slice(0, 2).map((testCase, index) => (
                       <button
                         key={testCase._id}
                         className={`case-button ${
@@ -850,18 +979,43 @@
                   ) : testResults.status ? (
                     <>
                       <div className="test-summary">
-                        <p className={`result-status ${
+                        <p
+                          className={`result-status ${
                             testResults.passedTests === testResults.totalTests ? "success" : "error"
                           }`}
                         >
-                          {testResults.passedTests === testResults.totalTests ? "All Tests Passed!" : "Some Tests Failed"}
+                          {testResults.passedTests === testResults.totalTests ? (
+                            <>
+                              <span>✓</span> All Tests Passed!
+                            </>
+                          ) : (
+                            <>
+                              <span>✕</span> Some Tests Failed
+                            </>
+                          )}
                         </p>
                         <p className="test-count">
                           Passed {testResults.passedTests} of {testResults.totalTests} test cases
                         </p>
+                        <div className="marks-summary">
+                          <h4>Potential Marks:</h4>
+                          <div className="marks-grid">
+                            <div className="marks-item">
+                              <span>Basic Scoring:</span>
+                              <strong>{calculatedMarks.scenario1}/10</strong>
+                            </div>
+                            <div className="marks-item">
+                              <span>Difficulty-based:</span>
+                              <strong>{calculatedMarks.scenario2}/10</strong>
+                            </div>
+                            <div className="marks-item">
+                              <span>Performance-based:</span>
+                              <strong>{calculatedMarks.scenario3}/10</strong>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Show active test case details */}
                       <div className="result-details">
                         <div className="result-header">
                           <h3>Test Case {testCases.findIndex(tc => tc._id === activeTestCase) + 1} Details</h3>
@@ -892,39 +1046,39 @@
 
                       {/* Add a new section for all test case results */}
                       <div className="all-results-section">
-                        <h3>All Test Results</h3>
-                        <div className="all-results-container">
-                          {testResults.allResults &&
-                            testResults.allResults.map((result) => (
-                              <div
-                                key={result.id}
-                                className={`test-result-card ${
-                                  result.isSuccess ? "success" : "failure"
-                                }`}
-                                onClick={() => setActiveTestCase(result.id)}
-                              >
-                                <div className="test-card-header">
-                                  <span>Test Case {testCases.findIndex(tc => tc._id === result.id) + 1}</span>
-                                  <span
-                                    className={`status-indicator ${
-                                      result.isSuccess ? "success" : "failure"
-                                    }`}
+                        <h3>Test Results</h3>
+                        <div className="test-results-table">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Test Case</th>
+                                <th>Input</th>
+                                <th>Your Output</th>
+                                <th>Expected Output</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {testResults.allResults &&
+                                testResults.allResults.map((result, index) => (
+                                  <tr
+                                    key={result.id}
+                                    className={`test-row ${result.isSuccess ? "success" : "failure"}`}
+                                    onClick={() => setActiveTestCase(result.id)}
                                   >
-                                    {result.isSuccess ? "PASS" : "FAIL"}
-                                  </span>
-                                </div>
-                                <div className="test-card-details">
-                                  <div className="test-card-row">
-                                    <span>Input:</span>
-                                    <span>{result.input}</span>
-                                  </div>
-                                  <div className="test-card-row">
-                                    <span>Output:</span>
-                                    <span>{result.output || "(empty)"}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                                    <td>{index + 1}</td>
+                                    <td>{index < 2 ? result.input : "..."}</td>
+                                    <td>{index < 2 ? result.output : "..."}</td>
+                                    <td>{index < 2 ? result.expectedOutput : "..."}</td>
+                                    <td>
+                                      <span className={`status-badge ${result.isSuccess ? "success" : "failure"}`}>
+                                        {result.isSuccess ? "✅ PASS" : "❌ FAIL"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     </>
