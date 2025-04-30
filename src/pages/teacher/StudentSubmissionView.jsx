@@ -475,16 +475,36 @@ const StudentSubmissionView = () => {
         <div className="test-results">
           <h3>Test Results</h3>
           <div className="test-summary">
-            <p><strong>Passed Tests:</strong> {submission.testResults.passedTests} / {submission.testResults.totalTests}</p>
-            <p><strong>Auto Grade:</strong> {submission.marks_obtained.toFixed(2)}/10</p>
-            <p><strong>Time Taken:</strong> {submission.time_taken}s</p>
+            <div className="test-summary-card">
+              <strong>Passed Tests</strong>
+              <span>{submission.testResults.passedTests} / {submission.testResults.totalTests}</span>
+            </div>
+            <div className="test-summary-card score">
+              <strong>Auto Grade</strong>
+              <span>{submission.marks_obtained.toFixed(2)}/10</span>
+            </div>
+            <div className="test-summary-card">
+              <strong>Time Taken</strong>
+              <span>{submission.time_taken}s</span>
+            </div>
           </div>
           
           <div className="marks-breakdown">
             <h4>Marks Breakdown</h4>
-            <p><strong>Scenario 1:</strong> {submission.marks.scenario1Marks}</p>
-            <p><strong>Scenario 2:</strong> {submission.marks.scenario2Marks}</p>
-            <p><strong>Scenario 3:</strong> {submission.marks.scenario3Marks}</p>
+            <div className="scenario-grid">
+              <div className="scenario-card">
+                <strong>Scenario 1</strong>
+                <span>{submission.marks.scenario1Marks}</span>
+              </div>
+              <div className="scenario-card">
+                <strong>Scenario 2</strong>
+                <span>{submission.marks.scenario2Marks}</span>
+              </div>
+              <div className="scenario-card">
+                <strong>Scenario 3</strong>
+                <span>{submission.marks.scenario3Marks}</span>
+              </div>
+            </div>
           </div>
 
           <div className="detailed-results">
@@ -492,10 +512,10 @@ const StudentSubmissionView = () => {
             {submission.testResults.allResults.map((result, index) => (
               <div key={index} className={`test-case ${result.isSuccess ? 'passed' : 'failed'}`}>
                 <p><strong>Test Case {index + 1}:</strong> {result.status}</p>
-                <p><strong>Input:</strong> {result.input}</p>
-                <p><strong>Expected Output:</strong> {result.expectedOutput}</p>
-                <p><strong>Actual Output:</strong> {result.output}</p>
-                {result.message && <p><strong>Message:</strong> {result.message}</p>}
+                <p><strong>Input:</strong> <span>{result.input}</span></p>
+                <p><strong>Expected Output:</strong> <span>{result.expectedOutput}</span></p>
+                <p><strong>Actual Output:</strong> <span>{result.output}</span></p>
+                {result.message && <p><strong>Message:</strong> <span>{result.message}</span></p>}
               </div>
             ))}
           </div>
