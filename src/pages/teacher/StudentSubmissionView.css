@@ -494,6 +494,68 @@
   font-size: 0.9rem;
 }
 
+/* Export Buttons */
+.summary-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.export-btn {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.export-btn.excel {
+  background-color: #217346;
+  color: white;
+}
+
+.export-btn.pdf {
+  background-color: #FF4433;
+  color: white;
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.export-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .summary-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .export-buttons {
+    width: 100%;
+  }
+  
+  .export-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
 /* Loading State */
 .loading-container {
   display: flex;

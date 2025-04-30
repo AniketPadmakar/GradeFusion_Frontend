@@ -4,6 +4,9 @@ import { dateUtils } from '../../utils/dateUtils';
 import hostURL from '../../data/URL';
 import { getToken, deleteToken } from '../../data/Token';
 import { Bar, Pie } from 'react-chartjs-2';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -27,7 +30,7 @@ ChartJS.register(
 );
 
 const StudentSubmissionView = () => {
-  // State declarations
+  // Existing state declarations
   const [submissions, setSubmissions] = useState([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -562,6 +565,102 @@ const StudentSubmissionView = () => {
 
   const processedChartData = processChartData();
 
+  const exportToExcel = () => {
+    const dataToExport = filteredSubmissions.map(submission => ({
+      'Student Name': submission.studentName,
+      'Student ID': submission.studentId,
+      'Class': submission.class,
+      'Batch': submission.batch,
+      'Assignment': submission.assignmentName,
+      'Question': submission.questionTitle,
+      'Submission Date': dateUtils.formatForDisplay(submission.submissionDate),
+      'Status': submission.status,
+      'Time Taken (s)': submission.time_taken,
+      'Passed Tests': `${submission.testResults.passedTests}/${submission.testResults.totalTests}`,
+      'Total Score': submission.marks_obtained.toFixed(2),
+      'Scenario 1': submission.marks.scenario1Marks,
+      'Scenario 2': submission.marks.scenario2Marks,
+      'Scenario 3': submission.marks.scenario3Marks
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
+
+    // Auto-adjust column widths
+    const columnWidths = [];
+    dataToExport.forEach(row => {
+      Object.keys(row).forEach((key, i) => {
+        const cellLength = String(row[key]).length;
+        columnWidths[i] = Math.max(columnWidths[i] || 0, cellLength, key.length);
+      });
+    });
+    ws['!cols'] = columnWidths.map(width => ({ width: Math.min(width + 2, 50) }));
+
+    // Generate and download Excel file
+    XLSX.writeFile(wb, 'student_submissions_report.xlsx');
+  };
+
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Add title
+      doc.setFontSize(16);
+      doc.text('Student Submissions Report', 15, 15);
+      
+      // Add timestamp
+      doc.setFontSize(11);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 15, 25);
+      
+      // Add submission count
+      doc.text(`Total Submissions: ${filteredSubmissions.length}`, 15, 35);
+
+      const tableHeaders = [['Student Name', 'ID', 'Class', 'Batch', 'Status', 'Tests', 'Score']];
+      const tableData = filteredSubmissions.map(submission => [
+        submission.studentName,
+        submission.studentId,
+        submission.class,
+        submission.batch,
+        submission.status,
+        `${submission.testResults.passedTests}/${submission.testResults.totalTests}`,
+        submission.marks_obtained.toFixed(2)
+      ]);
+
+      // Generate table
+      doc.autoTable({
+        head: tableHeaders,
+        body: tableData,
+        startY: 45,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { 
+          fillColor: [79, 70, 229], 
+          textColor: 255,
+          fontSize: 8,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 25 },
+          6: { cellWidth: 20 }
+        },
+        margin: { top: 45 },
+        theme: 'grid'
+      });
+
+      // Save the PDF
+      doc.save('student_submissions_report.pdf');
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+
   return (
     <>
       <nav className="navbar">
@@ -602,7 +701,7 @@ const StudentSubmissionView = () => {
                   value={filters.batch} 
                   onChange={(e) => handleFilterChange('batch', e.target.value)}
                 >
-                  <option value="all">All Batches</option>
+                  <option value="all">Select Batches</option>
                   {['A1', 'A2', 'B1', 'B2'].map(batch => (
                     <option key={batch} value={batch}>{batch}</option>
                   ))}
@@ -640,7 +739,17 @@ const StudentSubmissionView = () => {
           </div>
 
           <div className="results-summary">
-            <p>Showing {filteredSubmissions.length} submissions</p>
+            <div className="summary-content">
+              <p>Showing {filteredSubmissions.length} submissions</p>
+              <div className="export-buttons">
+                <button onClick={exportToExcel} className="export-btn excel">
+                  Export to Excel
+                </button>
+                <button onClick={exportToPDF} className="export-btn pdf">
+                  Export to PDF
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -312,7 +312,7 @@ import React, { useEffect, useRef, useState } from "react";
           headers: {
             "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
             "X-RapidAPI-Key":
-              "87114658f6msh1cc13fef2b1a2dfp14a88djsn8810d5742a87",
+              "25775b08b6msh0c62d68e269a445p193965jsn7f67254d5cfa",
           },
         }
       );
@@ -492,7 +492,7 @@ import React, { useEffect, useRef, useState } from "react";
                   "Content-Type": "application/json",
                   "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
                   "X-RapidAPI-Key":
-                    "87114658f6msh1cc13fef2b1a2dfp14a88djsn8810d5742a87",
+                    "25775b08b6msh0c62d68e269a445p193965jsn7f67254d5cfa",
                 },
                 body: JSON.stringify({ submissions }),
               }
@@ -552,7 +552,7 @@ import React, { useEffect, useRef, useState } from "react";
                 method: "GET",
                 headers: {
                   "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
-                  "X-RapidAPI-Key": "87114658f6msh1cc13fef2b1a2dfp14a88djsn8810d5742a87",
+                  "X-RapidAPI-Key": "25775b08b6msh0c62d68e269a445p193965jsn7f67254d5cfa",
                 },
               }
             );
@@ -620,7 +620,7 @@ import React, { useEffect, useRef, useState } from "react";
                 "Content-Type": "application/json",
                 "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
                 "X-RapidAPI-Key":
-                  "87114658f6msh1cc13fef2b1a2dfp14a88djsn8810d5742a87",
+                  "25775b08b6msh0c62d68e269a445p193965jsn7f67254d5cfa",
               },
               body: JSON.stringify({ submissions }),
             }
