@@ -1,79 +1,159 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { dateUtils } from '../../utils/dateUtils';
+import hostURL from '../../data/URL';
+import { getToken, deleteToken } from '../../data/Token';
+import { Bar, Pie } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js';
 import './StudentSubmissionView.css';
-import { useNavigate } from "react-router-dom";
-import { getToken,deleteToken } from "../../data/Token";
 
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 const StudentSubmissionView = () => {
+  // State declarations
   const [submissions, setSubmissions] = useState([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     class: 'all',
     batch: 'all',
     status: 'all',
     studentName: ''
   });
+  const [chartData, setChartData] = useState({
+    labels: [],
+    datasets: []
+  });
+  const [chartOptions, setChartOptions] = useState({});
 
-  const navigate = useNavigate();// Add this function to handle logout
+  // New state for charts
+  const [chartConfig, setChartConfig] = useState({
+    numBins: 5,
+    showLegend: true,
+    chartType: 'bar', // 'bar' or 'pie'
+    groupBy: 'batch', // 'batch' or 'class'
+    scoreType: 'total', // 'total', 'scenario1', 'scenario2', 'scenario3'
+  });
+
+  const navigate = useNavigate();
+
+  // Logout function
   const handleLogout = () => {
-   // Delete the token from cookies
-   deleteToken("token");
-   // Redirect to home page
-   navigate('/');
-};
+    deleteToken("token");
+    navigate('/');
+  };
 
+  const retryFetch = async (url, options, maxRetries = 3) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, options);
+        return response;
+      } catch (error) {
+        if (i === maxRetries - 1) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+      }
+    }
+  };
 
-  // Simulated data - Replace with actual API call
-  useEffect(() => {
-    setTimeout(() => {
-      const mockSubmissions = [
+  // Fetch submissions from backend
+  const fetchSubmissions = React.useCallback(async (batchFilter) => {
+    try {
+      const token = getToken("token");
+      if (!token) {
+        navigate('/login');
+        throw new Error("Authentication required");
+      }
+
+      const response = await retryFetch(
+        `${hostURL.link}/app/teacher/response-Teacher/fetch-batch-responses?batch=${
+          batchFilter === 'all' ? 'A1' : batchFilter
+        }`,
         {
-          id: 1,
-          studentName: "John Doe",
-          studentId: "ST001",
-          class: "CS-101",
-          batch: "1",
-          submissionDate: "2025-02-18T10:30:00",
-          questionTitle: "Array Implementation",
-          codeSubmitted: `def bubble_sort(arr):
-    n = len(arr)
-    for i in range(n):
-        for j in range(0, n-i-1):
-            if arr[j] > arr[j+1]:
-                arr[j], arr[j+1] = arr[j+1], arr[j]
-    return arr`,
-          status: "evaluated",
-          executionTime: "0.5s",
-          testCasesPassed: "8/10",
-          autoGrade: "80"
-        },
-        {
-          id: 2,
-          studentName: "Jane Smith",
-          studentId: "ST002",
-          class: "CS-102",
-          batch: "2",
-          submissionDate: "2025-02-18T11:30:00",
-          questionTitle: "Linked List Implementation",
-          codeSubmitted: `class Node:
-    def __init__(self, data):
-        self.data = data
-        self.next = None`,
-          status: "evaluated",
-          executionTime: "0.3s",
-          testCasesPassed: "10/10",
-          autoGrade: "95"
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          }
         }
-      ];
-      setSubmissions(mockSubmissions);
-      setFilteredSubmissions(mockSubmissions);
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Server error");
+      }
+
+      const { responses } = await response.json();
+      // Transform responses into required format
+      const transformedSubmissions = responses.map(response => ({
+        id: response._id,
+        studentName: response.student_id?.name || 'Unknown Student',
+        studentId: response.student_id?._id || 'Unknown ID',
+        class: response.student_id?.class || 'Unknown Class',
+        batch: response.student_id?.batch || 'Unknown Batch',
+        email: response.student_id?.email || 'No Email',
+        submissionDate: response.submitted_at || response.created_at || 'No Date',
+        assignmentName: response.assignment_id?.assignment_name || 'Unknown Assignment',
+        questionTitle: response.question_id?.question_text || 'Unknown Question',
+        response_text: response.response_text || 'No Code Submitted',
+        status: response.status || 'unknown',
+        time_taken: response.time_taken || 0,
+        submitted_at: response.submitted_at || 'Not submitted',
+        created_at: response.created_at || 'Unknown',
+        updated_at: response.updated_at || 'Unknown',
+        marks_obtained: response.marks_obtained || 0,
+        marks: response.marks || {
+          scenario1Marks: '0.00',
+          scenario2Marks: '0.00',
+          scenario3Marks: '0.00'
+        },
+        testResults: {
+          passedTests: response.test_results?.passedTests || 0,
+          totalTests: response.test_results?.totalTests || 0,
+          allResults: response.test_results?.allResults?.map(result => ({
+            ...result,
+            isSuccess: result.status === "Accepted"
+          })) || []
+        }
+      }));
+
+      setSubmissions(transformedSubmissions);
+      setFilteredSubmissions(transformedSubmissions);
+      setError(null);
+    } catch (error) {
+      console.error("Error fetching submissions:", error.message);
+      setError(error.message === "Failed to fetch" ? "Network connection error. Please check your internet connection." : error.message);
+      setSubmissions([]);
+      setFilteredSubmissions([]);
+      if (error.message.includes("Authentication")) {
+        navigate('/login');
+      }
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchSubmissions(filters.batch);
+  }, [fetchSubmissions, filters.batch]);
 
   // Filter submissions based on selected filters
   useEffect(() => {
@@ -101,6 +181,248 @@ const StudentSubmissionView = () => {
     setFilteredSubmissions(result);
   }, [filters, submissions]);
 
+  // Chart data processing functions
+  const processChartData = () => {
+    if (!filteredSubmissions.length) return null;
+
+    const groupField = chartConfig.groupBy;
+    const groups = {};
+    
+    filteredSubmissions.forEach(submission => {
+      const groupKey = submission[groupField] || 'Unknown';
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      
+      let score;
+      switch (chartConfig.scoreType) {
+        case 'scenario1':
+          score = parseFloat(submission.marks?.scenario1Marks || '0');
+          break;
+        case 'scenario2':
+          score = parseFloat(submission.marks?.scenario2Marks || '0');
+          break;
+        case 'scenario3':
+          score = parseFloat(submission.marks?.scenario3Marks || '0');
+          break;
+        default:
+          score = submission.marks_obtained || 0;
+      }
+      
+      if (!isNaN(score)) {
+        groups[groupKey].push(score);
+      }
+    });
+
+    // Calculate statistics for each group
+    const labels = Object.keys(groups).sort();
+    const data = labels.map(label => {
+      const scores = groups[label];
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      return avg.toFixed(2);
+    });
+
+    return {
+      labels,
+      datasets: [{
+        label: `Average ${chartConfig.scoreType} Score by ${chartConfig.groupBy}`,
+        data,
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.5)',
+          'rgba(54, 162, 235, 0.5)',
+          'rgba(255, 206, 86, 0.5)',
+          'rgba(75, 192, 192, 0.5)',
+          'rgba(153, 102, 255, 0.5)',
+        ],
+        borderColor: [
+          'rgba(255, 99, 132, 1)',
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)',
+        ],
+        borderWidth: 1,
+      }],
+    };
+  };
+
+  const processHistogramData = (scores, numBins) => {
+    if (!scores.length) return { bins: [], labels: [] };
+    
+    // Always use 0-10 range for scores since that's our score scale
+    const min = 0;
+    const max = 10;
+    const binWidth = (max - min) / numBins;
+    
+    const bins = Array(numBins).fill(0);
+    const labels = [];
+    
+    for (let i = 0; i < numBins; i++) {
+      const binStart = min + (i * binWidth);
+      const binEnd = binStart + binWidth;
+      labels.push(`${binStart.toFixed(1)}-${binEnd.toFixed(1)}`);
+      
+      scores.forEach(score => {
+        if (score >= binStart && (score < binEnd || (i === numBins - 1 && score <= binEnd))) {
+          bins[i]++;
+        }
+      });
+    }
+    
+    return { bins, labels };
+  };
+
+  const getChartData = () => {
+    if (!filteredSubmissions.length) return null;
+
+    const groupField = chartConfig.groupBy;
+    const groups = {};
+    
+    // Group submissions by batch or class
+    filteredSubmissions.forEach(submission => {
+      const groupKey = submission[groupField] || 'Unknown';
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      
+      let score = 0;
+      switch (chartConfig.scoreType) {
+        case 'scenario1':
+          score = parseFloat(submission.marks?.scenario1Marks || '0');
+          break;
+        case 'scenario2':
+          score = parseFloat(submission.marks?.scenario2Marks || '0');
+          break;
+        case 'scenario3':
+          score = parseFloat(submission.marks?.scenario3Marks || '0');
+          break;
+        default:
+          score = submission.marks_obtained || 0;
+      }
+      
+      if (!isNaN(score)) {
+        groups[groupKey].push(score);
+      }
+    });
+
+    // Process data based on chart type
+    if (chartConfig.chartType === 'bar') {
+      const labels = Object.keys(groups).sort();
+      const data = labels.map(label => {
+        const scores = groups[label];
+        const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+        return avg.toFixed(2);
+      });
+
+      return {
+        labels,
+        datasets: [{
+          label: `Average ${chartConfig.scoreType} Score by ${chartConfig.groupBy}`,
+          data,
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1,
+        }]
+      };
+    } else {
+      // For pie chart, use distribution of scores in bins
+      const allScores = filteredSubmissions.map(sub => {
+        let score;
+        switch (chartConfig.scoreType) {
+          case 'scenario1':
+            score = parseFloat(sub.marks?.scenario1Marks || '0');
+            break;
+          case 'scenario2':
+            score = parseFloat(sub.marks?.scenario2Marks || '0');
+            break;
+          case 'scenario3':
+            score = parseFloat(sub.marks?.scenario3Marks || '0');
+            break;
+          default:
+            score = sub.marks_obtained || 0;
+        }
+        return !isNaN(score) ? score : 0;
+      }).filter(score => score !== null);
+
+      const { bins, labels } = processHistogramData(allScores, chartConfig.numBins);
+
+      return {
+        labels,
+        datasets: [{
+          data: bins,
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.5)',
+            'rgba(54, 162, 235, 0.5)',
+            'rgba(255, 206, 86, 0.5)',
+            'rgba(75, 192, 192, 0.5)',
+            'rgba(153, 102, 255, 0.5)',
+          ],
+          borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+          ],
+          borderWidth: 1,
+        }]
+      };
+    }
+  };
+
+  const getChartOptions = () => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: chartConfig.showLegend,
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: chartConfig.chartType === 'bar' 
+          ? `Average ${chartConfig.scoreType} Scores by ${chartConfig.groupBy}`
+          : `Score Distribution (${chartConfig.scoreType})`,
+        font: {
+          size: 16,
+          weight: 'bold'
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            if (chartConfig.chartType === 'pie') {
+              return `Count: ${context.raw} submissions`;
+            }
+            const score = parseFloat(context.raw);
+            const groupName = context.label;
+            const scoreType = chartConfig.scoreType === 'total' ? 'Total' : `Scenario ${chartConfig.scoreType.slice(-1)}`;
+            return `${groupName}: ${score.toFixed(2)}/10 (${scoreType})`;
+          }
+        }
+      }
+    },
+    scales: chartConfig.chartType === 'bar' ? {
+      y: {
+        beginAtZero: true,
+        max: 10, // Set max to 10 since that's our score scale
+        title: {
+          display: true,
+          text: 'Average Score (0-10)'
+        },
+        ticks: {
+          stepSize: 1
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: chartConfig.groupBy === 'batch' ? 'Batch' : 'Class'
+        }
+      }
+    } : undefined
+  });
+
   const handleSubmissionClick = (submission) => {
     setSelectedSubmission(submission);
   };
@@ -119,6 +441,81 @@ const StudentSubmissionView = () => {
       status: 'all',
       studentName: ''
     });
+  };
+
+  const renderSubmissionDetails = (submission) => {
+    return (
+      <div className="submission-detail-content">
+        <div className="detail-header">
+          <h2>{submission.questionTitle}</h2>
+          <div className="status-info">
+            <span className={`status-badge ${submission.status}`}>
+              {submission.status}
+            </span>
+            <span className="execution-time">
+              Execution Time: {submission.time_taken}s
+            </span>
+          </div>
+        </div>
+
+        <div className="assignment-info">
+          <h3>Assignment Details</h3>
+          <p><strong>Assignment Name:</strong> {submission.assignmentName}</p>
+          <p><strong>Question:</strong> {submission.questionTitle}</p>
+        </div>
+
+        <div className="student-info">
+          <h3>Student Information</h3>
+          <p><strong>Name:</strong> {submission.studentName}</p>
+          <p><strong>Email:</strong> {submission.email}</p>
+          <p><strong>Class:</strong> {submission.class}</p>
+          <p><strong>Batch:</strong> {submission.batch}</p>
+        </div>
+
+        <div className="test-results">
+          <h3>Test Results</h3>
+          <div className="test-summary">
+            <p><strong>Passed Tests:</strong> {submission.testResults.passedTests} / {submission.testResults.totalTests}</p>
+            <p><strong>Auto Grade:</strong> {submission.marks_obtained.toFixed(2)}/10</p>
+            <p><strong>Time Taken:</strong> {submission.time_taken}s</p>
+          </div>
+          
+          <div className="marks-breakdown">
+            <h4>Marks Breakdown</h4>
+            <p><strong>Scenario 1:</strong> {submission.marks.scenario1Marks}</p>
+            <p><strong>Scenario 2:</strong> {submission.marks.scenario2Marks}</p>
+            <p><strong>Scenario 3:</strong> {submission.marks.scenario3Marks}</p>
+          </div>
+
+          <div className="detailed-results">
+            <h4>Test Case Details</h4>
+            {submission.testResults.allResults.map((result, index) => (
+              <div key={index} className={`test-case ${result.isSuccess ? 'passed' : 'failed'}`}>
+                <p><strong>Test Case {index + 1}:</strong> {result.status}</p>
+                <p><strong>Input:</strong> {result.input}</p>
+                <p><strong>Expected Output:</strong> {result.expectedOutput}</p>
+                <p><strong>Actual Output:</strong> {result.output}</p>
+                {result.message && <p><strong>Message:</strong> {result.message}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="code-section">
+          <h3>Submitted Code</h3>
+          <pre className="code-block">
+            <code>{submission.response_text}</code>
+          </pre>
+        </div>
+
+        <div className="submission-timestamps">
+          <h3>Submission Timeline</h3>
+          <p><strong>Submitted At:</strong> {submission.submitted_at}</p>
+          <p><strong>Created At:</strong> {submission.created_at}</p>
+          <p><strong>Last Updated:</strong> {submission.updated_at}</p>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -143,6 +540,8 @@ const StudentSubmissionView = () => {
     );
   }
 
+  const processedChartData = processChartData();
+
   return (
     <>
       <nav className="navbar">
@@ -152,7 +551,7 @@ const StudentSubmissionView = () => {
             <Link to="/" className="nav-link active">Home</Link>
             <Link to="/about" className="nav-link">About</Link>
             <Link to="/contact" className="nav-link">Contact</Link>
-              <button className="nav-link signup-btn" onClick={handleLogout}>Log out</button>
+            <button className="nav-link signup-btn" onClick={handleLogout}>Log out</button>
           </div>
         </div>
       </nav>
@@ -169,10 +568,10 @@ const StudentSubmissionView = () => {
                   onChange={(e) => handleFilterChange('class', e.target.value)}
                 >
                   <option value="all">All Classes</option>
-                  <option value="CS-101">FE</option>
-                  <option value="CS-102">SE</option>
-                  <option value="CS-103">TE</option>
-                  <option value="CS-104">BE</option>
+                  <option value="FE">FE</option>
+                  <option value="SE">SE</option>
+                  <option value="TE">TE</option>
+                  <option value="BE">BE</option>
                 </select>
               </div>
 
@@ -182,13 +581,11 @@ const StudentSubmissionView = () => {
                   id="batchSelect"
                   value={filters.batch} 
                   onChange={(e) => handleFilterChange('batch', e.target.value)}
-                  disabled={filters.class === 'all'}
                 >
                   <option value="all">All Batches</option>
-                  <option value="1">Batch 1</option>
-                  <option value="2">Batch 2</option>
-                  <option value="3">Batch 3</option>
-                  <option value="4">Batch 4</option>
+                  {['A1', 'A2', 'B1', 'B2'].map(batch => (
+                    <option key={batch} value={batch}>{batch}</option>
+                  ))}
                 </select>
               </div>
 
@@ -200,8 +597,10 @@ const StudentSubmissionView = () => {
                   onChange={(e) => handleFilterChange('status', e.target.value)}
                 >
                   <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="evaluated">Evaluated</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="reopened">Reopened</option>
+                  <option value="resubmitted">Resubmitted</option>
+                  <option value="graded">Graded</option>
                 </select>
               </div>
             </div>
@@ -225,6 +624,89 @@ const StudentSubmissionView = () => {
           </div>
         </div>
 
+        <div className="stats-and-analytics">
+          <div className="chart-controls">
+            <div className="chart-options">
+              <div className="control-group">
+                <label htmlFor="chartType">Chart Type:</label>
+                <select
+                  id="chartType"
+                  value={chartConfig.chartType}
+                  onChange={(e) => setChartConfig(prev => ({ ...prev, chartType: e.target.value }))}
+                >
+                  <option value="bar">Bar Chart</option>
+                  <option value="pie">Pie Chart</option>
+                </select>
+              </div>
+
+              <div className="control-group">
+                <label htmlFor="groupBy">Group By:</label>
+                <select
+                  id="groupBy"
+                  value={chartConfig.groupBy}
+                  onChange={(e) => setChartConfig(prev => ({ ...prev, groupBy: e.target.value }))}
+                >
+                  <option value="batch">Batch</option>
+                  <option value="class">Class</option>
+                </select>
+              </div>
+
+              <div className="control-group">
+                <label htmlFor="scoreType">Score Type:</label>
+                <select
+                  id="scoreType"
+                  value={chartConfig.scoreType}
+                  onChange={(e) => setChartConfig(prev => ({ ...prev, scoreType: e.target.value }))}
+                >
+                  <option value="total">Total Score</option>
+                  <option value="scenario1">Scenario 1</option>
+                  <option value="scenario2">Scenario 2</option>
+                  <option value="scenario3">Scenario 3</option>
+                </select>
+              </div>
+
+              {chartConfig.chartType === 'pie' && (
+                <div className="control-group">
+                  <label htmlFor="numBins">Number of Bins:</label>
+                  <select
+                    id="numBins"
+                    value={chartConfig.numBins}
+                    onChange={(e) => setChartConfig(prev => ({ ...prev, numBins: parseInt(e.target.value) }))}
+                  >
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="7">7</option>
+                    <option value="10">10</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="control-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={chartConfig.showLegend}
+                    onChange={(e) => setChartConfig(prev => ({ ...prev, showLegend: e.target.checked }))}
+                  />
+                  Show Legend
+                </label>
+              </div>
+            </div>
+
+            <div className="chart-container">
+              {filteredSubmissions.length > 0 ? (
+                chartConfig.chartType === 'bar' ? (
+                  <Bar data={getChartData()} options={getChartOptions()} />
+                ) : (
+                  <Pie data={getChartData()} options={getChartOptions()} />
+                )
+              ) : (
+                <p className="no-data">No data available for visualization</p>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="submissions-grid">
           <div className="submissions-list">
             {filteredSubmissions.length > 0 ? (
@@ -245,7 +727,7 @@ const StudentSubmissionView = () => {
                     <p><strong>Class:</strong> {submission.class}</p>
                     <p><strong>Batch:</strong> {submission.batch}</p>
                     <p><strong>Submitted:</strong> {dateUtils.formatForDisplay(submission.submissionDate)}</p>
-                    <p><strong>Auto Grade:</strong> {submission.autoGrade}/100</p>
+                    <p><strong>Auto Grade:</strong> {submission.autoGrade}/10</p>
                   </div>
                 </div>
               ))
@@ -260,32 +742,7 @@ const StudentSubmissionView = () => {
           </div>
 
           <div className="submission-details-panel">
-            {selectedSubmission ? (
-              <div className="details-content">
-                <h2>Submission Details</h2>
-                <div className="student-info">
-                  <h3>Student Information</h3>
-                  <p><strong>Name:</strong> {selectedSubmission.studentName}</p>
-                  <p><strong>ID:</strong> {selectedSubmission.studentId}</p>
-                  <p><strong>Class:</strong> {selectedSubmission.class}</p>
-                  <p><strong>Batch:</strong> {selectedSubmission.batch}</p>
-                </div>
-
-                <div className="submission-info">
-                  <h3>Question Details</h3>
-                  <p><strong>Title:</strong> {selectedSubmission.questionTitle}</p>
-                  <p><strong>Submitted:</strong> {new Date(selectedSubmission.submissionDate).toLocaleString()}</p>
-                  <p><strong>Execution Time:</strong> {selectedSubmission.executionTime}</p>
-                  <p><strong>Test Cases:</strong> {selectedSubmission.testCasesPassed}</p>
-                  <p><strong>Auto Grade:</strong> {selectedSubmission.autoGrade}/100</p>
-                </div>
-
-                <div className="code-preview">
-                  <h3>Code Submission</h3>
-                  <pre>{selectedSubmission.codeSubmitted}</pre>
-                </div>
-              </div>
-            ) : (
+            {selectedSubmission ? renderSubmissionDetails(selectedSubmission) : (
               <div className="no-submission-selected">
                 <p>Select a submission to view details</p>
               </div>
