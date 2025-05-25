@@ -7,7 +7,8 @@
   
 //   export default hostURL;
   const hostURL = {
-    link:"http://localhost:4000"
+    // link:"http://localhost:4000"
+    link:"https://gradefusion-v1.onrender.com"
   };
   
   export default hostURL;
